@@ -1,0 +1,21 @@
+name: ceilometer
+summary: Openstack measures collection system
+maintainer: Yolanda Robla <yolanda.robla@canonical.com>
+description: |
+ Ceilometer project aims to become the infrastructure to collect measurements 
+ within OpenStack so that no two agents would need to be written to collect 
+ the same data. It's primary targets are monitoring and metering, but the 
+ framework should be easily expandable to collect for other needs. To that 
+ effect, Ceilometer should be able to share collected data with a variety of consumers.
+provides:
+  ceilometer-agent:
+    interface: ceilometer-agent
+  ceilometer-collector:
+    interface: ceilometer-collector
+  api-service:
+    interface: http
+requires:
+  shared-db:
+    interface: mongo
+  shared-db:
+    interface: mysql-shared
