@@ -8,7 +8,7 @@ options:
     type: string
     description: "Enable verbose logging"
   openstack-origin:
-    default: distro
+    default: cloud:precise-folsom
     type: string
     description: |
       Repository from which to install.  May be one of the following:

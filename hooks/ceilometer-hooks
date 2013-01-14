@@ -1,0 +1,29 @@
+#!/usr/bin/python
+
+import sys
+import time
+
+from utils import *
+from lib.openstack_common import *
+
+config = config_get()
+
+packages = "ceilometer"
+service = "ceilometer"
+
+def install_hook():
+    if config["openstack-origin"]!="distro":
+        configure_installation_source(config["openstack-origin"])
+    execute("apt-get update", die=True)
+    execute("apt-get -y install %s" % packages, die=True, echo=True)
+
+hooks = {
+    "install": install_hook,
+}
+
+# ceiloemter-hooks gets called by symlink corresponding to the requested relation
+# hook.
+arg0 = sys.argv[0].split("/").pop()
+if arg0 not in hooks.keys():
+    error_out("Unsupported hook: %s" % arg0)
+hooks[arg0]()
