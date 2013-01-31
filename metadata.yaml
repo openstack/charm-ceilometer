@@ -16,6 +16,6 @@ provides:
     interface: http
 requires:
   shared-db:
-    interface: mongo
-  shared-db:
     interface: mysql-shared
+  amqp:
+    interface: rabbitmq
