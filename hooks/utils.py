@@ -1,216 +1,264 @@
-#!/usr/bin/python
-import subprocess
-import sys
-import json
+#
+# Copyright 2012 Canonical Ltd.
+#
+# Authors:
+#  James Page <james.page@ubuntu.com>
+#  Paul Collins <paul.collins@canonical.com>
+#
+
 import os
-import time
-
-from lib.openstack_common import *
-
-ceilometer_conf = "/etc/ceilometer/ceilometer.conf"
-
-def execute(cmd, die=False, echo=False):
-    """ Executes a command 
-
-    if die=True, script will exit(1) if command does not return 0
-    if echo=True, output of command will be printed to stdout
-
-    returns a tuple: (stdout, stderr, return code)
-    """
-    p = subprocess.Popen(cmd.split(" "),
-                         stdout=subprocess.PIPE,
-                         stdin=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    stdout=""
-    stderr=""
-
-    def print_line(l):
-        if echo:
-            print l.strip('\n')
-            sys.stdout.flush()
-
-    for l in iter(p.stdout.readline, ''):
-        print_line(l)
-        stdout += l
-    for l in iter(p.stderr.readline, ''):
-        print_line(l)
-        stderr += l
-
-    p.communicate()
-    rc = p.returncode
-
-    if die and rc != 0:
-        error_out("ERROR: command %s return non-zero.\n" % cmd)
-    return (stdout, stderr, rc)
+import subprocess
+import socket
+import sys
+import apt_pkg as apt
 
 
-def config_get():
-    """ Obtain the units config via 'config-get' 
-    Returns a dict representing current config.
-    private-address and IP of the unit is also tacked on for
-    convienence
-    """
-    output = execute("config-get --format json")[0]
-    if output:
-        config = json.loads(output)
-        # make sure no config element is blank after config-get
-        for c in config.keys():
-            if not config[c]:
-                error_out("ERROR: Config option has no paramter: %s" % c)
-        # tack on our private address and ip
-        hostname = execute("unit-get private-address")[0].strip()
-        config["hostname"] = execute("unit-get private-address")[0].strip()
-    else:
-        config = {}
-    return config
-
-def relation_ids(relation_name=None):
-    j = execute('relation-ids --format=json %s' % relation_name)[0]
-    return json.loads(j)
-
-def relation_list(relation_id=None):
-    cmd = 'relation-list --format=json'
-    if relation_id:
-        cmd += ' -r %s' % relation_id
-    j = execute(cmd)[0]
-    return json.loads(j)
-
-def relation_set(relation_data):
-    """ calls relation-set for all key=values in dict """
-    for k in relation_data:
-        execute("relation-set %s=%s" % (k, relation_data[k]), die=True)
-
-def relation_get(relation_data):
-    """ Obtain all current relation data
-    relation_data is a list of options to query from the relation
-    Returns a k,v dict of the results. 
-    Leave empty responses out of the results as they haven't yet been
-    set on the other end. 
-    Caller can then "len(results.keys()) == len(relation_data)" to find out if
-    all relation values have been set on the other side
-    """
-    results = {}
-    for r in relation_data:
-        result = execute("relation-get %s" % r, die=True)[0].strip('\n')
-        if result != "":
-           results[r] = result
-    return results
-
-def relation_get_dict(relation_id=None, remote_unit=None):
-    """Obtain all relation data as dict by way of JSON"""
-    cmd = 'relation-get --format=json'
-    if relation_id:
-        cmd += ' -r %s' % relation_id
-    if remote_unit:
-        remote_unit_orig = os.getenv('JUJU_REMOTE_UNIT', None)
-        os.environ['JUJU_REMOTE_UNIT'] = remote_unit
-    j = execute(cmd, die=True)[0]
-    if remote_unit and remote_unit_orig:
-        os.environ['JUJU_REMOTE_UNIT'] = remote_unit_orig
-    d = json.loads(j)
-    settings = {}
-    # convert unicode to strings
-    for k, v in d.iteritems():
-        settings[str(k)] = str(v)
-    return settings
-
-def update_config_block(block, **kwargs):
-    """ Updates ceilometer.conf blocks given kwargs.
-    Can be used to update driver settings for a particular backend,
-    setting the sql connection, etc.
-
-    Parses block heading as '[block]'
-
-    If block does not exist, a new block will be created at end of file with
-    given kwargs
-    """
-    f = open(ceilometer_conf, "r+")
-    orig = f.readlines()
-    new = []
-    found_block = ""
-    heading = "[%s]\n" % block
-
-    lines = len(orig)
-    ln = 0
-
-    def update_block(block):
-        for k, v in kwargs.iteritems():
-            for l in block:
-                if l.strip().split(" ")[0] == k:
-                    block[block.index(l)] = "%s = %s\n" % (k, v)
-                    return
-            block.append('%s = %s\n' % (k, v))
-            block.append('\n')
+def do_hooks(hooks):
+    hook = os.path.basename(sys.argv[0])
 
     try:
-        found = False
-        while ln < lines:
-            if orig[ln] != heading:
-                new.append(orig[ln])
-                ln += 1
-            else:
-                new.append(orig[ln])
-                ln += 1
-                block = []
-                while orig[ln].strip() != '':
-                    block.append(orig[ln])
-                    ln += 1
-                update_block(block)
-                new += block
-                found = True
+        hook_func = hooks[hook]
+    except KeyError:
+        juju_log('INFO',
+                 "This charm doesn't know how to handle '{}'.".format(hook))
+    else:
+        hook_func()
 
-        if not found:
-            if new[(len(new) - 1)].strip() != '':
-                new.append('\n')
-            new.append('%s' % heading)
-            for k, v in kwargs.iteritems():
-                new.append('%s = %s\n' % (k, v))
-            new.append('\n')
-    except:
-        error_out('Error while attempting to update config block. '\
-                  'Refusing to overwite existing config.')
 
+def install(*pkgs):
+    cmd = [
+        'apt-get',
+        '-y',
+        'install'
+          ]
+    for pkg in pkgs:
+        cmd.append(pkg)
+    subprocess.check_call(cmd)
+
+TEMPLATES_DIR = 'templates'
+
+try:
+    import jinja2
+except ImportError:
+    install('python-jinja2')
+    import jinja2
+
+def render_template(template_name, context, template_dir=TEMPLATES_DIR):
+    templates = jinja2.Environment(
+                    loader=jinja2.FileSystemLoader(template_dir)
+                    )
+    template = templates.get_template(template_name)
+    return template.render(context)
+
+CLOUD_ARCHIVE = \
+""" # Ubuntu Cloud Archive
+deb http://ubuntu-cloud.archive.canonical.com/ubuntu {} main
+"""
+
+CLOUD_ARCHIVE_POCKETS = {
+    'precise-folsom': 'precise-updates/folsom',
+    'precise-folsom/updates': 'precise-updates/folsom',
+    'precise-folsom/proposed': 'precise-proposed/folsom',
+    'precise-grizzly': 'precise-updates/grizzly',
+    'precise-grizzly/updates': 'precise-updates/grizzly',
+    'precise-grizzly/proposed': 'precise-proposed/grizzly'
+    }
+
+def configure_source():
+    source = str(config_get('openstack-origin'))
+    if not source:
         return
+    if source.startswith('ppa:'):
+        cmd = [
+            'add-apt-repository',
+            source
+            ]
+        subprocess.check_call(cmd)
+    if source.startswith('cloud:'):
+        install('ubuntu-cloud-keyring')
+        pocket = source.split(':')[1]
+        with open('/etc/apt/sources.list.d/cloud-archive.list', 'w') as apt:
+            apt.write(CLOUD_ARCHIVE.format(CLOUD_ARCHIVE_POCKETS[pocket]))
+    if source.startswith('deb'):
+        l = len(source.split('|'))
+        if l == 2:
+            (apt_line, key) = source.split('|')
+            cmd = [
+                'apt-key',
+                'adv', '--keyserver keyserver.ubuntu.com',
+                '--recv-keys', key
+                ]
+            subprocess.check_call(cmd)
+        elif l == 1:
+            apt_line = source
 
-    # backup original config
-    backup = open(ceilometer_conf + '.juju-back', 'w+')
-    for l in orig:
-        backup.write(l)
-    backup.close()
+        with open('/etc/apt/sources.list.d/ceilometer.list', 'w') as apt:
+            apt.write(apt_line + "\n")
+    cmd = [
+        'apt-get',
+        'update'
+        ]
+    subprocess.check_call(cmd)
 
-    # update config
-    f.seek(0)
-    f.truncate()
-    for l in new:
-        f.write(l)
+# Protocols
+TCP = 'TCP'
+UDP = 'UDP'
 
 
-def ceilometer_conf_update(opt, val):
-    """ Updates ceilometer.conf values 
-    If option exists, it is reset to new value
-    If it does not, it added to the top of the config file after the [DEFAULT]
-    heading to keep it out of the paste deploy config
-    """
-    f = open(ceilometer_conf, "r+")
-    orig = f.readlines()
-    new = ""
-    found = False
-    for l in orig:
-        if l.split(' ')[0] == opt:
-            juju_log("Updating %s, setting %s = %s" % (keystone_conf, opt, val))
-            new += "%s = %s\n" % (opt, val)
-            found  = True
+def expose(port, protocol='TCP'):
+    cmd = [
+        'open-port',
+        '{}/{}'.format(port, protocol)
+        ]
+    subprocess.check_call(cmd)
+
+
+def juju_log(severity, message):
+    cmd = [
+        'juju-log',
+        '--log-level', severity,
+        message
+        ]
+    subprocess.check_call(cmd)
+
+
+def relation_ids(relation):
+    cmd = [
+        'relation-ids',
+        relation
+        ]
+    return subprocess.check_output(cmd).split()  # IGNORE:E1103
+
+
+def relation_list(rid):
+    cmd = [
+        'relation-list',
+        '-r', rid,
+        ]
+    return subprocess.check_output(cmd).split()  # IGNORE:E1103
+
+
+def relation_get(attribute, unit=None, rid=None):
+    cmd = [
+        'relation-get',
+        ]
+    if rid:
+        cmd.append('-r')
+        cmd.append(rid)
+    cmd.append(attribute)
+    if unit:
+        cmd.append(unit)
+    value = subprocess.check_output(cmd).strip()  # IGNORE:E1103
+    if value == "":
+        return None
+    else:
+        return value
+
+
+def relation_set(**kwargs):
+    cmd = [
+        'relation-set'
+        ]
+    args = []
+    for k, v in kwargs.items():
+        if k == 'rid':
+            cmd.append('-r')
+            cmd.append(v)
         else:
-            new += l
-    new = new.split('\n')
-    # insert a new value at the top of the file, after the 'DEFAULT' header so
-    # as not to muck up paste deploy configuration later in the file 
-    if not found:
-        juju_log("Adding new config option %s = %s" % (opt, val))
-        header = new.index("[DEFAULT]")
-        new.insert((header+1), "%s = %s" % (opt, val))
-    f.seek(0)
-    f.truncate()
-    for l in new:
-        f.write("%s\n" % l)
-    f.close
+            args.append('{}={}'.format(k, v))
+    cmd += args
+    subprocess.check_call(cmd)
+
+
+def unit_get(attribute):
+    cmd = [
+        'unit-get',
+        attribute
+        ]
+    value = subprocess.check_output(cmd).strip()  # IGNORE:E1103
+    if value == "":
+        return None
+    else:
+        return value
+
+
+def config_get(attribute):
+    cmd = [
+        'config-get',
+        attribute
+        ]
+    value = subprocess.check_output(cmd).strip()  # IGNORE:E1103
+    if value == "":
+        return None
+    else:
+        return value
+
+
+def get_unit_hostname():
+    return socket.gethostname()
+
+
+def get_host_ip(hostname=unit_get('private-address')):
+    try:
+        # Test to see if already an IPv4 address
+        socket.inet_aton(hostname)
+        return hostname
+    except socket.error:
+        pass
+    try:
+        answers = dns.resolver.query(hostname, 'A')
+        if answers:
+            return answers[0].address
+    except dns.resolver.NXDOMAIN:
+        pass
+    return None
+
+
+CLUSTER_RESOURCES = {
+    'quantum-dhcp-agent': 'res_quantum_dhcp_agent',
+    'quantum-l3-agent': 'res_quantum_l3_agent'
+    }
+
+HAMARKER = '/var/lib/juju/haconfigured'
+
+
+def _service_ctl(service, action):
+    if (os.path.exists(HAMARKER) and
+        os.path.exists(os.path.join('/etc/init/',
+                                   '{}.override'.format(service))) and
+        service in CLUSTER_RESOURCES):
+        hostname = str(subprocess.check_output(['hostname'])).strip()
+        service_status = \
+            subprocess.check_output(['crm', 'resource', 'show',
+                                     CLUSTER_RESOURCES[service]])
+        # Only restart if we are the node that owns the service
+        if hostname in service_status:
+            subprocess.check_call(['crm', 'resource', action,
+                                  CLUSTER_RESOURCES[service]])
+    else:
+        subprocess.check_call(['service', service, action])
+
+
+def restart(*services):
+    for service in services:
+        _service_ctl(service, 'restart')
+
+
+def stop(*services):
+    for service in services:
+        _service_ctl(service, 'stop')
+
+
+def start(*services):
+    for service in services:
+        _service_ctl(service, 'start')
+
+
+def get_os_version(package=None):
+    apt.init()
+    cache = apt.Cache()
+    pkg = cache[package or 'quantum-common']
+    if pkg.current_ver:
+        return apt.upstream_version(pkg.current_ver.ver_str)
+    else:
+        return None
