@@ -1,8 +1,13 @@
+import os
+import uuid
+
 RABBIT_USER="nova"
 RABBIT_VHOST="nova"
 CEILOMETER_CONF="/etc/ceilometer/ceilometer.conf"
 
 SHARED_SECRET = "/etc/ceilometer/secret.txt"
+CEILOMETER_SERVICES = ['ceilometer-agent-central', 'ceilometer-collector', 'ceilometer-api']
+CEILOMETER_DB="ceilometer"
 
 def get_shared_secret():
     secret = None

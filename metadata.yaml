@@ -8,14 +8,10 @@ description: |
  framework should be easily expandable to collect for other needs. To that 
  effect, Ceilometer should be able to share collected data with a variety of consumers.
 provides:
-  ceilometer-agent:
-    interface: ceilometer-agent
-  ceilometer-collector:
-    interface: ceilometer-collector
-  api-service:
+  endpoint:
     interface: http
 requires:
   shared-db:
-    interface: mysql-shared
+    interface: mongodb
   amqp:
     interface: rabbitmq

@@ -213,30 +213,8 @@ def get_host_ip(hostname=unit_get('private-address')):
         pass
     return None
 
-
-CLUSTER_RESOURCES = {
-    'quantum-dhcp-agent': 'res_quantum_dhcp_agent',
-    'quantum-l3-agent': 'res_quantum_l3_agent'
-    }
-
-HAMARKER = '/var/lib/juju/haconfigured'
-
-
 def _service_ctl(service, action):
-    if (os.path.exists(HAMARKER) and
-        os.path.exists(os.path.join('/etc/init/',
-                                   '{}.override'.format(service))) and
-        service in CLUSTER_RESOURCES):
-        hostname = str(subprocess.check_output(['hostname'])).strip()
-        service_status = \
-            subprocess.check_output(['crm', 'resource', 'show',
-                                     CLUSTER_RESOURCES[service]])
-        # Only restart if we are the node that owns the service
-        if hostname in service_status:
-            subprocess.check_call(['crm', 'resource', action,
-                                  CLUSTER_RESOURCES[service]])
-    else:
-        subprocess.check_call(['service', service, action])
+    subprocess.check_call(['service', service, action])
 
 
 def restart(*services):
