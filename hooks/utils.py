@@ -11,7 +11,8 @@ import subprocess
 import socket
 import sys
 import apt_pkg as apt
-
+import re
+import ceilometer_utils
 
 def do_hooks(hooks):
     hook = os.path.basename(sys.argv[0])
@@ -104,6 +105,16 @@ def configure_source():
 TCP = 'TCP'
 UDP = 'UDP'
 
+def update_ports():
+    # extract old port from config and close it
+    ceilometer_config = open(ceilometer_utils.CEILOMETER_CONF).read()
+    current_api_port = re.search("^#*metering_api_port\s*=\s*(\w+)", ceilometer_config, re.MULTILINE).group(1)
+    if current_api_port:
+        unexpose(current_api_port)
+
+    port = config_get("service-port")
+    if port:
+        expose(port)
 
 def expose(port, protocol='TCP'):
     cmd = [
@@ -112,6 +123,12 @@ def expose(port, protocol='TCP'):
         ]
     subprocess.check_call(cmd)
 
+def unexpose(port, protocol='TCP'):
+    cmd = [
+        'close-port',
+        '{}/{}'.format(port, protocol)
+        ]
+    subprocess.check_call(cmd)
 
 def juju_log(severity, message):
     cmd = [

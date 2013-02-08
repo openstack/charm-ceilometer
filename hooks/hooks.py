@@ -47,11 +47,11 @@ def render_ceilometer_conf():
 
     if (context and contextdb and os.path.exists(ceilometer_utils.CEILOMETER_CONF)):
         context['metering_secret'] = ceilometer_utils.get_shared_secret()
+        context['service_port'] = utils.config_get('service-port')
         context['db_connection'] = "mongodb://"+contextdb["db_host"]+":"+contextdb["db_port"]+"/"+contextdb["db_name"]
 
         with open(ceilometer_utils.CEILOMETER_CONF, "w") as conf:
             conf.write(utils.render_template(os.path.basename(ceilometer_utils.CEILOMETER_CONF), context))
-
 def amqp_changed():
     render_ceilometer_conf()
     utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
@@ -63,11 +63,16 @@ def db_changed():
     render_ceilometer_conf()
     utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
 
+def config_changed():
+    utils.update_ports()
+    render_ceilometer_conf()
+
 utils.do_hooks({
     "install": install,
     "amqp-relation-joined": amqp_joined,
     "amqp-relation-changed": amqp_changed,
     "shared-db-relation-joined": db_joined,
-    "shared-db-relation-changed": db_changed
+    "shared-db-relation-changed": db_changed,
+    "config-changed": config_changed
 })
 sys.exit(0)
