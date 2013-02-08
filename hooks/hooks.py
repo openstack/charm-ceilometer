@@ -41,17 +41,40 @@ def get_db_conf():
                 return conf
     return None
 
+def get_keystone_conf():
+    for relid in utils.relation_ids('identity-service'):
+        for unit in utils.relation_list(relid):
+            keystone_username = utils.relation_get('service_username', unit, relid)
+            keystone_port = utils.relation_get('service_port', unit, relid)
+            keystone_host = utils.relation_get('private-address', unit, relid)
+            keystone_password = utils.relation_get('service_password', unit, relid)
+            keystone_tenant = utils.relation_get('service_tenant', unit, relid)
+
+            final_url = "http://"+keystone_host+":"+keystone_port+"/v2.0"
+
+            conf = {
+                "os-username": keystone_username,
+                "os-password": keystone_password,
+                "os-tenant-name": keystone_tenant,
+                "os-auth-url": final_url
+            }
+            if None not in conf.itervalues():
+                return conf
+    return None
+
 def render_ceilometer_conf():
     context = get_rabbit_conf()
     contextdb = get_db_conf()
+    contextkeystone = get_keystone_conf()
 
-    if (context and contextdb and os.path.exists(ceilometer_utils.CEILOMETER_CONF)):
+    if (context and contextdb and contextkeystone and os.path.exists(ceilometer_utils.CEILOMETER_CONF)):
         context['metering_secret'] = ceilometer_utils.get_shared_secret()
         context['service_port'] = utils.config_get('service-port')
         context['db_connection'] = "mongodb://"+contextdb["db_host"]+":"+contextdb["db_port"]+"/"+contextdb["db_name"]
 
         with open(ceilometer_utils.CEILOMETER_CONF, "w") as conf:
             conf.write(utils.render_template(os.path.basename(ceilometer_utils.CEILOMETER_CONF), context))
+
 def amqp_changed():
     render_ceilometer_conf()
     utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
@@ -67,12 +90,23 @@ def config_changed():
     utils.update_ports()
     render_ceilometer_conf()
 
+def keystone_joined():
+    port = utils.config_get("service-port")
+    url = "http://"+utils.get_host_ip()+":"+port+"/v1"
+    utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE, public_url=url, admin_url=url, internal_url=url)
+
+def keystone_changed():
+    render_ceilometer_conf()
+    utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
+
 utils.do_hooks({
     "install": install,
     "amqp-relation-joined": amqp_joined,
     "amqp-relation-changed": amqp_changed,
     "shared-db-relation-joined": db_joined,
     "shared-db-relation-changed": db_changed,
-    "config-changed": config_changed
+    "config-changed": config_changed,
+    "identity-service-relation-joined": keystone_joined,
+    "identity-service-relation-changed": keystone_changed
 })
 sys.exit(0)

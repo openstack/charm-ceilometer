@@ -15,3 +15,5 @@ requires:
     interface: mongodb
   amqp:
     interface: rabbitmq
+  identity-service:
+    interface: keystone

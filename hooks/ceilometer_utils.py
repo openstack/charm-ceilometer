@@ -8,6 +8,7 @@ CEILOMETER_CONF="/etc/ceilometer/ceilometer.conf"
 SHARED_SECRET = "/etc/ceilometer/secret.txt"
 CEILOMETER_SERVICES = ['ceilometer-agent-central', 'ceilometer-collector', 'ceilometer-api']
 CEILOMETER_DB="ceilometer"
+CEILOMETER_SERVICE = "ceilometer"
 
 def get_shared_secret():
     secret = None
