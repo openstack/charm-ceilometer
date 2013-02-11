@@ -46,17 +46,16 @@ def get_keystone_conf():
         for unit in utils.relation_list(relid):
             keystone_username = utils.relation_get('service_username', unit, relid)
             keystone_port = utils.relation_get('service_port', unit, relid)
-            keystone_host = utils.relation_get('private-address', unit, relid)
+            keystone_host = utils.relation_get('service_host', unit, relid)
             keystone_password = utils.relation_get('service_password', unit, relid)
             keystone_tenant = utils.relation_get('service_tenant', unit, relid)
 
-            final_url = "http://"+keystone_host+":"+keystone_port+"/v2.0"
-
             conf = {
-                "os-username": keystone_username,
-                "os-password": keystone_password,
-                "os-tenant-name": keystone_tenant,
-                "os-auth-url": final_url
+                "keystone_os_username": keystone_username,
+                "keystone_os_password": keystone_password,
+                "keystone_os_tenant": keystone_tenant,
+                "keystone_host": keystone_host,
+                "keystone_port": keystone_port
             }
             if None not in conf.itervalues():
                 return conf
@@ -68,6 +67,8 @@ def render_ceilometer_conf():
     contextkeystone = get_keystone_conf()
 
     if (context and contextdb and contextkeystone and os.path.exists(ceilometer_utils.CEILOMETER_CONF)):
+        # merge contexts
+        context.update(contextkeystone)
         context['metering_secret'] = ceilometer_utils.get_shared_secret()
         context['service_port'] = utils.config_get('service-port')
         context['db_connection'] = "mongodb://"+contextdb["db_host"]+":"+contextdb["db_port"]+"/"+contextdb["db_name"]
@@ -75,16 +76,19 @@ def render_ceilometer_conf():
         with open(ceilometer_utils.CEILOMETER_CONF, "w") as conf:
             conf.write(utils.render_template(os.path.basename(ceilometer_utils.CEILOMETER_CONF), context))
 
+        return True
+    return False
+
 def amqp_changed():
-    render_ceilometer_conf()
-    utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
+    if render_ceilometer_conf():
+        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
 
 def db_joined():
     utils.relation_set(ceilometer_database=ceilometer_utils.CEILOMETER_DB)
 
 def db_changed():
-    render_ceilometer_conf()
-    utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
+    if render_ceilometer_conf():
+        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
 
 def config_changed():
     utils.update_ports()
@@ -92,12 +96,13 @@ def config_changed():
 
 def keystone_joined():
     port = utils.config_get("service-port")
-    url = "http://"+utils.get_host_ip()+":"+port+"/v1"
-    utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE, public_url=url, admin_url=url, internal_url=url)
+    url = "http://"+utils.get_host_ip()+":"+port
+    region = utils.config_get("region")
+    utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE, public_url=url, admin_url=url, internal_url=url, region=region)
 
 def keystone_changed():
-    render_ceilometer_conf()
-    utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
+    if render_ceilometer_conf():
+        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
 
 utils.do_hooks({
     "install": install,

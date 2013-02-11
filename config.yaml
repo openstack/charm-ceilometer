@@ -30,3 +30,7 @@ options:
     default: 8777
     type: int
     description: "Port the bind the API server to"
+  region:
+    default: RegionOne
+    type: string
+    description: OpenStack Region

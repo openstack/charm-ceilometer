@@ -108,9 +108,11 @@ UDP = 'UDP'
 def update_ports():
     # extract old port from config and close it
     ceilometer_config = open(ceilometer_utils.CEILOMETER_CONF).read()
-    current_api_port = re.search("^#*metering_api_port\s*=\s*(\w+)", ceilometer_config, re.MULTILINE).group(1)
-    if current_api_port:
-        unexpose(current_api_port)
+    exps = re.search("^#*metering_api_port\s*=\s*(\w+)", ceilometer_config, re.MULTILINE)
+    if exps:
+        current_api_port = exps.group(1)
+        if current_api_port:
+            unexpose(current_api_port)
 
     port = config_get("service-port")
     if port:
