@@ -1,8 +1,8 @@
 import os
 import uuid
 
-RABBIT_USER="nova"
-RABBIT_VHOST="nova"
+RABBIT_USER="ceilometer"
+RABBIT_VHOST="ceilometer"
 CEILOMETER_CONF="/etc/ceilometer/ceilometer.conf"
 
 SHARED_SECRET = "/etc/ceilometer/secret.txt"
