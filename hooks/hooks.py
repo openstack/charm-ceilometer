@@ -104,6 +104,26 @@ def keystone_changed():
     if render_ceilometer_conf():
         utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
 
+def ceilometer_joined():
+    pass
+
+def ceilometer_changed():
+    # check if we have rabbit and keystone already set
+    context = get_rabbit_conf()
+    contextkeystone = get_keystone_conf()
+
+    if context and contextkeystone:
+        context.update(contextkeystone)
+        context['metering_secret'] = ceilometer_utils.get_shared_secret()
+
+        utils.relation_set(metering_secret=context['metering_secret'])
+        utils.relation_set(rabbit_host=context['rabbit_host'], rabbit_virtual_host=context['rabbit_virtual_host'], rabbit_userid=context['rabbit_userid'], rabbit_password=context['rabbit_password'])
+        utils.relation_set(keystone_os_username=context['keystone_os_username'], keystone_os_password=context['keystone_os_password'], keystone_os_tenant=context['keystone_os_tenant'],
+            keystone_host=context['keystone_host'], keystone_port=context['keystone_port'])
+    else:
+        # still waiting
+        utils.juju_log("INFO", "ceilometer: rabbit and keystone credentials not yet received from peer.")
+
 utils.do_hooks({
     "install": install,
     "amqp-relation-joined": amqp_joined,
@@ -112,6 +132,8 @@ utils.do_hooks({
     "shared-db-relation-changed": db_changed,
     "config-changed": config_changed,
     "identity-service-relation-joined": keystone_joined,
-    "identity-service-relation-changed": keystone_changed
+    "identity-service-relation-changed": keystone_changed,
+    "ceilometer-service-relation-joined": ceilometer_joined,
+    "ceilometer-service-relation-changed": ceilometer_changed
 })
 sys.exit(0)

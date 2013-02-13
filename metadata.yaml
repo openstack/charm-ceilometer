@@ -10,6 +10,8 @@ description: |
 provides:
   endpoint:
     interface: http
+  ceilometer-service:
+    interface: ceilometer
 requires:
   shared-db:
     interface: mongodb
