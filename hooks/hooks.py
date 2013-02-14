@@ -12,7 +12,7 @@ def install():
     utils.install(*ceilometer_utils.CEILOMETER_PACKAGES)
 
     port = ceilometer_utils.CEILOMETER_PORT
-    expose(port)
+    utils.expose(port)
 
 
 def amqp_joined():
