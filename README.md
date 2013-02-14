@@ -5,7 +5,7 @@ This charm provides the Ceilometer service for OpenStack.  It is intended to
 be used alongside the other OpenStack components, starting with the Folsom
 release.
 
-Ceilometer is made up of 2 separate services: an API service, and a collector 
+Ceilometer is made up of 2 separate services: an API service, and a collector
 service. This charm allows them to be deployed in different
 combination, depending on user preference and requirements.
 
@@ -30,12 +30,12 @@ Then Keystone and Rabbit relationships needs to be established:
     juju add-relation ceilometer keystone
 
 In order to capture the calculations, a Ceilometer compute agent
-needs to be installed in each nova node, and be related with 
+needs to be installed in each nova node, and be related with
 Ceilometer service:
 
     juju deploy ceilometer-agent
     juju add-relation ceilometer-agent nova-compute
     juju add-relation ceilometer:ceilometer-service ceilometer-agent:ceilometer-service
 
-Ceilometer provides an API service that can be used to retrieve 
+Ceilometer provides an API service that can be used to retrieve
 Openstack metrics.
