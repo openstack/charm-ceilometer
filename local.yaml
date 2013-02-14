@@ -1,6 +1,0 @@
-ceilometer:
-  debug: "true"
-  verbose: "true"
-  openstack-origin: "ppa:openstack-ubuntu-testing/grizzly-trunk-testing"
-  config-file: "/etc/ceilometer/ceilometer.conf"
-  service-port: 8777

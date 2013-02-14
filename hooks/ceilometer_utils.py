@@ -1,14 +1,19 @@
 import os
 import uuid
 
-RABBIT_USER="ceilometer"
-RABBIT_VHOST="ceilometer"
-CEILOMETER_CONF="/etc/ceilometer/ceilometer.conf"
+RABBIT_USER = "ceilometer"
+RABBIT_VHOST = "ceilometer"
+CEILOMETER_CONF = "/etc/ceilometer/ceilometer.conf"
+CEILOMETER_PORT = "8777"
 
 SHARED_SECRET = "/etc/ceilometer/secret.txt"
-CEILOMETER_SERVICES = ['ceilometer-agent-central', 'ceilometer-collector', 'ceilometer-api']
-CEILOMETER_DB="ceilometer"
+CEILOMETER_SERVICES = ['ceilometer-agent-central', 'ceilometer-collector',
+    'ceilometer-api']
+CEILOMETER_DB = "ceilometer"
 CEILOMETER_SERVICE = "ceilometer"
+CEILOMETER_PACKAGES = ['python-ceilometer', 'ceilometer-common',
+    'ceilometer-agent-central', 'ceilometer-collector', 'ceilometer-api']
+
 
 def get_shared_secret():
     secret = None
