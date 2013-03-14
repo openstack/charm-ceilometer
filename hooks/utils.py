@@ -13,6 +13,7 @@ import sys
 import apt_pkg as apt
 import re
 import ceilometer_utils
+import dns.resolver
 
 
 def do_hooks(hooks):
@@ -217,12 +218,9 @@ def get_host_ip(hostname=unit_get('private-address')):
         return hostname
     except socket.error:
         pass
-    try:
-        answers = dns.resolver.query(hostname, 'A')
-        if answers:
-            return answers[0].address
-    except dns.resolver.NXDOMAIN:
-        pass
+    answers = dns.resolver.query(hostname, 'A')
+    if answers:
+        return answers[0].address
     return None
 
 

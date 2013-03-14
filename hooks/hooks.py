@@ -114,7 +114,7 @@ def config_changed():
 
 def keystone_joined():
     port = ceilometer_utils.CEILOMETER_PORT
-    url = "http://" + utils.get_host_ip() + ":" + port
+    url = "http://" + utils.unit_get("private-address") + ":" + port
     region = utils.config_get("region")
     utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE,
         public_url=url, admin_url=url, internal_url=url, region=region)
