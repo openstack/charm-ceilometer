@@ -140,7 +140,7 @@ def ceilometer_joined():
             utils.relation_set(**context)
     else:
         # still waiting
-        utils.juju_log("INFO", "ceilometer: rabbit and keystone " + \
+        utils.juju_log("INFO", "ceilometer: rabbit and keystone " +
             "credentials not yet received from peer.")
 
 utils.do_hooks({
