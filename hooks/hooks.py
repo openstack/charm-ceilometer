@@ -96,7 +96,6 @@ def render_ceilometer_conf():
 def amqp_changed():
     if render_ceilometer_conf():
         utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
-        ceilometer_joined()
 
 
 def db_joined():
@@ -123,25 +122,14 @@ def keystone_joined():
 def keystone_changed():
     if render_ceilometer_conf():
         utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
-        ceilometer_joined()
 
 
 def ceilometer_joined():
-    # check if we have rabbit and keystone already set
-    context = get_rabbit_conf()
-    contextkeystone = get_keystone_conf()
-
-    if context and contextkeystone:
-        context.update(contextkeystone)
-        context['metering_secret'] = ceilometer_utils.get_shared_secret()
-
-        for relid in utils.relation_ids('ceilometer-service'):
-            context['rid'] = relid
-            utils.relation_set(**context)
-    else:
-        # still waiting
-        utils.juju_log("INFO", "ceilometer: rabbit and keystone " +
-            "credentials not yet received from peer.")
+    # update metering secret
+    metering_secret = ceilometer_utils.get_shared_secret()
+    for relid in utils.relation_ids('ceilometer-service'):
+        utils.relation_set(metering_secret=metering_secret, rid=relid)
+    
 
 utils.do_hooks({
     "install": install,
