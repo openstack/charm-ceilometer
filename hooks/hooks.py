@@ -16,8 +16,43 @@ def install():
 
 
 def amqp_joined():
-    utils.relation_set(username=ceilometer_utils.RABBIT_USER,
-        vhost=ceilometer_utils.RABBIT_VHOST)
+    for rid in utils.relation_ids('ceilometer'):
+        utils.relation_set(username=ceilometer_utils.RABBIT_USER,
+            vhost=ceilometer_utils.RABBIT_VHOST, rid=rid)
+
+
+def amqp_changed():
+    if render_ceilometer_conf():
+        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
+        ceilometer_changed()
+
+
+def db_joined():
+    for rid in utils.relation_ids('ceilometer'):
+        utils.relation_set(ceilometer_database=ceilometer_utils.CEILOMETER_DB,
+            rid=rid)
+
+
+def db_changed():
+    if render_ceilometer_conf():
+        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
+        ceilometer_changed()
+
+
+def keystone_joined():
+    port = ceilometer_utils.CEILOMETER_PORT
+    url = "http://" + utils.unit_get("private-address") + ":" + str(port)
+    region = utils.config_get("region")
+
+    for rid in utils.relation_ids('ceilometer'):
+        utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE,
+            public_url=url, admin_url=url, internal_url=url, region=region, rid=rid)
+
+
+def keystone_changed():
+    if render_ceilometer_conf():
+        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
+        ceilometer_changed()
 
 
 def get_rabbit_conf():
@@ -93,42 +128,29 @@ def render_ceilometer_conf():
     return False
 
 
-def amqp_changed():
-    if render_ceilometer_conf():
-        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
-
-
-def db_joined():
-    utils.relation_set(ceilometer_database=ceilometer_utils.CEILOMETER_DB)
-
-
-def db_changed():
-    if render_ceilometer_conf():
-        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
-
-
-def config_changed():
-    render_ceilometer_conf()
-
-
-def keystone_joined():
-    port = ceilometer_utils.CEILOMETER_PORT
-    url = "http://" + utils.unit_get("private-address") + ":" + str(port)
-    region = utils.config_get("region")
-    utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE,
-        public_url=url, admin_url=url, internal_url=url, region=region)
-
-
-def keystone_changed():
-    if render_ceilometer_conf():
-        utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
-
-
 def ceilometer_joined():
     # update metering secret
     metering_secret = ceilometer_utils.get_shared_secret()
     for relid in utils.relation_ids('ceilometer-service'):
         utils.relation_set(metering_secret=metering_secret, rid=relid)
+
+
+def ceilometer_changed():
+    # set all relationships for ceilometer service
+    context = get_rabbit_conf()
+    contextdb = get_db_conf()
+    contextkeystone = get_keystone_conf()
+
+    if context and contextdb and contextkeystone:
+        context.update(contextdb)
+        context.update(contextkeystone)
+        context["metering_secret"] = ceilometer_utils.get_shared_secret()
+
+        # set all that info into ceilometer-service relationship
+        for relid in utils.relation_ids('ceilometer-service'):
+            for unit in utils.relation_list(relid):
+                context["rid"] = relid
+                utils.relation_set(**context)
     
 
 utils.do_hooks({
@@ -137,9 +159,9 @@ utils.do_hooks({
     "amqp-relation-changed": amqp_changed,
     "shared-db-relation-joined": db_joined,
     "shared-db-relation-changed": db_changed,
-    "config-changed": config_changed,
     "identity-service-relation-joined": keystone_joined,
     "identity-service-relation-changed": keystone_changed,
-    "ceilometer-service-relation-joined": ceilometer_joined
+    "ceilometer-service-relation-joined": ceilometer_joined,
+    "ceilometer-service-relation-changed": ceilometer_changed
 })
 sys.exit(0)
