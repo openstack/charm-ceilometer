@@ -16,9 +16,8 @@ def install():
 
 
 def amqp_joined():
-    for rid in utils.relation_ids('ceilometer'):
-        utils.relation_set(username=ceilometer_utils.RABBIT_USER,
-            vhost=ceilometer_utils.RABBIT_VHOST, rid=rid)
+    utils.relation_set(username=ceilometer_utils.RABBIT_USER,
+        vhost=ceilometer_utils.RABBIT_VHOST)
 
 
 def amqp_changed():
@@ -28,9 +27,7 @@ def amqp_changed():
 
 
 def db_joined():
-    for rid in utils.relation_ids('ceilometer'):
-        utils.relation_set(ceilometer_database=ceilometer_utils.CEILOMETER_DB,
-            rid=rid)
+    utils.relation_set(ceilometer_database=ceilometer_utils.CEILOMETER_DB)
 
 
 def db_changed():
@@ -44,9 +41,8 @@ def keystone_joined():
     url = "http://" + utils.unit_get("private-address") + ":" + str(port)
     region = utils.config_get("region")
 
-    for rid in utils.relation_ids('ceilometer'):
-        utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE,
-            public_url=url, admin_url=url, internal_url=url, region=region, rid=rid)
+    utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE,
+        public_url=url, admin_url=url, internal_url=url, region=region)
 
 
 def keystone_changed():
