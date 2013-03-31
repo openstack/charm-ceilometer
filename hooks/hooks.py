@@ -1,18 +1,14 @@
 #!/usr/bin/python
 
-import sys
-import time
 import os
-import utils
+import lib.utils as utils
 import ceilometer_utils
 
 
 def install():
     utils.configure_source()
     utils.install(*ceilometer_utils.CEILOMETER_PACKAGES)
-
-    port = ceilometer_utils.CEILOMETER_PORT
-    utils.expose(port)
+    utils.expose(ceilometer_utils.CEILOMETER_PORT)
 
 
 def amqp_joined():
@@ -23,7 +19,7 @@ def amqp_joined():
 def amqp_changed():
     if render_ceilometer_conf():
         utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
-        ceilometer_changed()
+        ceilometer_joined()
 
 
 def db_joined():
@@ -33,7 +29,7 @@ def db_joined():
 def db_changed():
     if render_ceilometer_conf():
         utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
-        ceilometer_changed()
+        ceilometer_joined()
 
 
 def keystone_joined():
@@ -48,7 +44,7 @@ def keystone_joined():
 def keystone_changed():
     if render_ceilometer_conf():
         utils.restart(*ceilometer_utils.CEILOMETER_SERVICES)
-        ceilometer_changed()
+        ceilometer_joined()
 
 
 def get_rabbit_conf():
@@ -62,6 +58,10 @@ def get_rabbit_conf():
                 "rabbit_password": utils.relation_get('password',
                                                       unit, relid)
                 }
+            if utils.relation_get('clustered',
+                                  unit, relid):
+                conf["rabbit_host"] = utils.relation_get('vip',
+                                                         unit, relid)
             if None not in conf.itervalues():
                 return conf
     return None
@@ -84,12 +84,15 @@ def get_keystone_conf():
     for relid in utils.relation_ids('identity-service'):
         for unit in utils.relation_list(relid):
             keystone_username = utils.relation_get('service_username',
-                unit, relid)
-            keystone_port = utils.relation_get('service_port', unit, relid)
-            keystone_host = utils.relation_get('service_host', unit, relid)
+                                                   unit, relid)
+            keystone_port = utils.relation_get('service_port',
+                                               unit, relid)
+            keystone_host = utils.relation_get('service_host',
+                                               unit, relid)
             keystone_password = utils.relation_get('service_password',
-                unit, relid)
-            keystone_tenant = utils.relation_get('service_tenant', unit, relid)
+                                                   unit, relid)
+            keystone_tenant = utils.relation_get('service_tenant',
+                                                 unit, relid)
 
             conf = {
                 "keystone_os_username": keystone_username,
@@ -125,29 +128,19 @@ def render_ceilometer_conf():
 
 
 def ceilometer_joined():
-    # update metering secret
-    metering_secret = ceilometer_utils.get_shared_secret()
-    for relid in utils.relation_ids('ceilometer-service'):
-        utils.relation_set(metering_secret=metering_secret, rid=relid)
-
-
-def ceilometer_changed():
     # set all relationships for ceilometer service
     context = get_rabbit_conf()
     contextdb = get_db_conf()
     contextkeystone = get_keystone_conf()
-
     if context and contextdb and contextkeystone:
         context.update(contextdb)
         context.update(contextkeystone)
         context["metering_secret"] = ceilometer_utils.get_shared_secret()
-
         # set all that info into ceilometer-service relationship
         for relid in utils.relation_ids('ceilometer-service'):
-            for unit in utils.relation_list(relid):
-                context["rid"] = relid
-                utils.relation_set(**context)
-    
+            context["rid"] = relid
+            utils.relation_set(**context)
+
 
 utils.do_hooks({
     "install": install,
@@ -157,7 +150,5 @@ utils.do_hooks({
     "shared-db-relation-changed": db_changed,
     "identity-service-relation-joined": keystone_joined,
     "identity-service-relation-changed": keystone_changed,
-    "ceilometer-service-relation-joined": ceilometer_joined,
-    "ceilometer-service-relation-changed": ceilometer_changed
+    "ceilometer-service-relation-joined": ceilometer_joined
 })
-sys.exit(0)
