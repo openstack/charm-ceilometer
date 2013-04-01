@@ -1,6 +1,8 @@
 import os
 import uuid
 import ConfigParser
+import sys
+from lib.utils import juju_log
 
 RABBIT_USER = "ceilometer"
 RABBIT_VHOST = "ceilometer"
@@ -56,6 +58,6 @@ def modify_config_file(nova_conf, values):
             config.write(f)
 
         f.close()
-    except IOError as e:
+    except IOError:
         juju_log('ERROR', 'Error updating nova config file')
         sys.exit(1)
