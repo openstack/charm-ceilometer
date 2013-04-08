@@ -38,7 +38,9 @@ def keystone_joined():
     region = utils.config_get("region")
 
     utils.relation_set(service=ceilometer_utils.CEILOMETER_SERVICE,
-        public_url=url, admin_url=url, internal_url=url, region=region)
+        public_url=url, admin_url=url, internal_url=url,
+        requested_roles=ceilometer_utils.CEILOMETER_ROLE,
+        region=region)
 
 
 def keystone_changed():
