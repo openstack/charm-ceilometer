@@ -5,6 +5,7 @@ import sys
 #import lib.utils as utils
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
+    apt_update
 )
 from charmhelpers.core.hookenv import (
     open_port,
@@ -43,6 +44,7 @@ hooks = Hooks()
 @hooks.hook()
 def install():
     configure_installation_source(config('openstack-origin'))
+    apt_update(fatal=True)
     apt_install(filter_installed_packages(CEILOMETER_PACKAGES),
                 fatal=True)
     open_port(CEILOMETER_PORT)
