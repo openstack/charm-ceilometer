@@ -8,6 +8,8 @@ description: |
  framework should be easily expandable to collect for other needs. To that
  effect, Ceilometer should be able to share collected data with a variety
  of consumers.
+categories:
+  - miscellaneous
 provides:
   ceilometer-service:
     interface: ceilometer
