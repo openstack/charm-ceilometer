@@ -3,7 +3,7 @@ import uuid
 from charmhelpers.fetch import apt_install as install
 
 RABBIT_USER = "ceilometer"
-RABBIT_VHOST = "ceilometer"
+RABBIT_VHOST = "openstack"
 CEILOMETER_CONF = "/etc/ceilometer/ceilometer.conf"
 
 SHARED_SECRET = "/etc/ceilometer/secret.txt"
