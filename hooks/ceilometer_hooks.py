@@ -153,6 +153,8 @@ def render_ceilometer_conf():
         context.update(contextdb)
         context['metering_secret'] = get_shared_secret()
         context['service_port'] = CEILOMETER_PORT
+        context['debug'] = config('debug')
+        context['verbose'] = config('verbose')
 
         with open(CEILOMETER_CONF, "w") as conf:
             conf.write(render_template(os.path.basename(CEILOMETER_CONF),

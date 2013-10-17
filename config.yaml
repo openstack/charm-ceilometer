@@ -1,12 +1,12 @@
 options:
   debug:
-    default: "false"
-    type: string
-    description: "Enable debug logging"
+    default: False
+    type: boolean
+    description: Enable debug logging
   verbose:
-    default: "false"
-    type: string
-    description: "Enable verbose logging"
+    default: False
+    type: boolean
+    description: Enable verbose logging
   openstack-origin:
     default: cloud:precise-grizzly
     type: string
