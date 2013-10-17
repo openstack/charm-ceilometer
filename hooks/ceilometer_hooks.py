@@ -71,6 +71,12 @@ def all_changed():
         ceilometer_joined()
 
 
+@hooks.hook('config-changed')
+def config_changed():
+    install()
+    all_changed()
+
+
 @hooks.hook("identity-service-relation-joined")
 def keystone_joined():
     url = "http://{}:{}".format(unit_get("private-address"),
