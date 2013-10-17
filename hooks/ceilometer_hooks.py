@@ -71,7 +71,8 @@ def all_changed():
         ceilometer_joined()
 
 
-@hooks.hook('config-changed')
+@hooks.hook('config-changed',
+            'upgrade-charm')
 def config_changed():
     install()
     all_changed()
