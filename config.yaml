@@ -26,3 +26,11 @@ options:
     default: RegionOne
     type: string
     description: OpenStack Region
+  rabbit-user:
+    default: ceilometer
+    type: string
+    description: Username to request access on rabbitmq-server.
+  rabbit-vhost:
+    default: openstack
+    type: string
+    description: RabbitMQ virtual host to request access on rabbitmq-server.
