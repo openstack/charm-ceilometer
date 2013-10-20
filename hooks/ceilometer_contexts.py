@@ -60,3 +60,15 @@ class CeilometerContext(OSContextGenerator):
             'metering_secret': get_shared_secret()
         }
         return ctxt
+
+
+class CeilometerServiceContext(OSContextGenerator):
+    interfaces = ['ceilometer-service']
+
+    def __call__(self):
+        for relid in relation_ids('ceilometer-service'):
+            for unit in related_units(relid):
+                conf = relation_get(unit=unit, rid=relid)
+                if context_complete(conf):
+                    return conf
+        return {}
