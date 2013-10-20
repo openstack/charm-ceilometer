@@ -10,6 +10,7 @@ description: |
  of consumers.
 categories:
   - miscellaneous
+  - openstack
 provides:
   ceilometer-service:
     interface: ceilometer
