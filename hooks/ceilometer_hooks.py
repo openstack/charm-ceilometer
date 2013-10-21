@@ -15,7 +15,8 @@ from charmhelpers.core.hookenv import (
     log
 )
 from charmhelpers.core.host import (
-    restart_on_change
+    restart_on_change,
+    lsb_release
 )
 from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
@@ -39,7 +40,11 @@ CONFIGS = register_configs()
 
 @hooks.hook()
 def install():
-    configure_installation_source(config('openstack-origin'))
+    origin = config('openstack-origin')
+    if (lsb_release()['DISTRIB_CODENAME'] == 'precise'
+            and origin == 'distro'):
+        origin = 'cloud:precise-grizzly'
+    configure_installation_source(origin)
     apt_update(fatal=True)
     apt_install(filter_installed_packages(CEILOMETER_PACKAGES),
                 fatal=True)

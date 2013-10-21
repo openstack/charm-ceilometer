@@ -26,7 +26,8 @@ TO_PATCH = [
     'filter_installed_packages',
     'CONFIGS',
     'unit_get',
-    'get_ceilometer_context'
+    'get_ceilometer_context',
+    'lsb_release'
 ]
 
 
@@ -35,6 +36,7 @@ class CeilometerHooksTest(CharmTestCase):
     def setUp(self):
         super(CeilometerHooksTest, self).setUp(hooks, TO_PATCH)
         self.config.side_effect = self.test_config.get
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}
 
     def test_configure_source(self):
         self.test_config.set('openstack-origin', 'cloud:precise-havana')
@@ -42,10 +44,22 @@ class CeilometerHooksTest(CharmTestCase):
         self.configure_installation_source.\
             assert_called_with('cloud:precise-havana')
 
-    def test_install_hook(self):
+    def test_install_hook_precise(self):
         self.filter_installed_packages.return_value = hooks.CEILOMETER_PACKAGES
         hooks.hooks.execute(['hooks/install'])
-        self.assertTrue(self.configure_installation_source.called)
+        self.configure_installation_source.\
+            assert_called_with('cloud:precise-grizzly')
+        self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
+        self.apt_update.assert_called_with(fatal=True)
+        self.apt_install.assert_called_with(hooks.CEILOMETER_PACKAGES,
+                                            fatal=True)
+
+    def test_install_hook_distro(self):
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'saucy'}
+        self.filter_installed_packages.return_value = hooks.CEILOMETER_PACKAGES
+        hooks.hooks.execute(['hooks/install'])
+        self.configure_installation_source.\
+            assert_called_with('distro')
         self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
         self.apt_update.assert_called_with(fatal=True)
         self.apt_install.assert_called_with(hooks.CEILOMETER_PACKAGES,
