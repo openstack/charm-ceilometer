@@ -1,4 +1,4 @@
-from mock import patch, call
+from mock import patch, call, MagicMock
 
 import ceilometer_utils as utils
 
@@ -6,10 +6,16 @@ from test_utils import CharmTestCase
 
 TO_PATCH = [
     'get_os_codename_package',
+    'get_os_codename_install_source',
+    'configure_installation_source',
     'templating',
     'LoggingConfigContext',
     'MongoDBContext',
     'CeilometerContext',
+    'config',
+    'log',
+    'apt_install',
+    'apt_update'
 ]
 
 
@@ -17,6 +23,7 @@ class CeilometerUtilsTest(CharmTestCase):
 
     def setUp(self):
         super(CeilometerUtilsTest, self).setUp(utils, TO_PATCH)
+        self.config.side_effect = self.test_config.get
 
     def tearDown(self):
         super(CeilometerUtilsTest, self).tearDown()
@@ -47,3 +54,24 @@ class CeilometerUtilsTest(CharmTestCase):
                         }}):
             self.assertTrue(utils.get_ceilometer_context(),
                             {'data': 'test'})
+
+    def test_do_openstack_upgrade(self):
+        self.config.side_effect = self.test_config.get
+        self.test_config.set('openstack-origin', 'cloud:precise-havana')
+        self.get_os_codename_install_source.return_value = 'havana'
+        configs = MagicMock()
+        utils.do_openstack_upgrade(configs)
+        configs.set_release.assert_called_with(openstack_release='havana')
+        self.log.assert_called()
+        self.apt_update.assert_called_with(fatal=True)
+        dpkg_opts = [
+            '--option', 'Dpkg::Options::=--force-confnew',
+            '--option', 'Dpkg::Options::=--force-confdef',
+        ]
+        self.apt_install.assert_called_with(
+            packages=utils.CEILOMETER_PACKAGES,
+            options=dpkg_opts, fatal=True
+        )
+        self.configure_installation_source.assert_called_with(
+            'cloud:precise-havana'
+        )

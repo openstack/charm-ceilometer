@@ -18,7 +18,8 @@ from charmhelpers.core.host import (
     restart_on_change
 )
 from charmhelpers.contrib.openstack.utils import (
-    configure_installation_source
+    configure_installation_source,
+    openstack_upgrade_available
 )
 from ceilometer_utils import (
     CEILOMETER_PACKAGES,
@@ -27,7 +28,8 @@ from ceilometer_utils import (
     CEILOMETER_ROLE,
     register_configs,
     restart_map,
-    get_ceilometer_context
+    get_ceilometer_context,
+    do_openstack_upgrade
 )
 from ceilometer_contexts import CEILOMETER_PORT
 
@@ -64,9 +66,17 @@ def any_changed():
     ceilometer_joined()
 
 
-@hooks.hook('config-changed',
-            'upgrade-charm')
+@hooks.hook('config-changed')
+@restart_on_change(restart_map())
 def config_changed():
+    if openstack_upgrade_available('ceilometer-common'):
+        do_openstack_upgrade(CONFIGS)
+    CONFIGS.write_all()
+    ceilometer_joined()
+
+
+@hooks.hook('upgrade-charm')
+def upgrade_charm():
     install()
     any_changed()
 

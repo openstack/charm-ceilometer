@@ -15,6 +15,8 @@ from test_utils import CharmTestCase
 TO_PATCH = [
     'relation_set',
     'configure_installation_source',
+    'openstack_upgrade_available',
+    'do_openstack_upgrade',
     'apt_install',
     'apt_update',
     'open_port',
@@ -73,12 +75,25 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(changed.called)
         self.assertTrue(install.called)
 
-    @patch.object(hooks, 'install')
-    @patch.object(hooks, 'any_changed')
-    def test_config_changed(self, changed, install):
+    @patch.object(hooks, 'ceilometer_joined')
+    def test_config_changed_no_upgrade(self, joined):
+        self.openstack_upgrade_available.return_value = False
         hooks.hooks.execute(['hooks/config-changed'])
-        self.assertTrue(changed.called)
-        self.assertTrue(install.called)
+        self.openstack_upgrade_available.\
+            assert_called_with('ceilometer-common')
+        self.assertFalse(self.do_openstack_upgrade.called)
+        self.assertTrue(self.CONFIGS.write_all.called)
+        self.assertTrue(joined.called)
+
+    @patch.object(hooks, 'ceilometer_joined')
+    def test_config_changed_upgrade(self, joined):
+        self.openstack_upgrade_available.return_value = True
+        hooks.hooks.execute(['hooks/config-changed'])
+        self.openstack_upgrade_available.\
+            assert_called_with('ceilometer-common')
+        self.assertTrue(self.do_openstack_upgrade.called)
+        self.assertTrue(self.CONFIGS.write_all.called)
+        self.assertTrue(joined.called)
 
     def test_keystone_joined(self):
         self.unit_get.return_value = 'thishost'
