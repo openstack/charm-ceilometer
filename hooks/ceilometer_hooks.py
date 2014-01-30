@@ -71,6 +71,15 @@ def any_changed():
     ceilometer_joined()
 
 
+@hooks.hook("amqp-relation-departed")
+@restart_on_change(restart_map())
+def amqp_departed():
+    if 'amqp' not in CONFIGS.complete_contexts():
+        log('amqp relation incomplete. Peer not ready?')
+        return
+    CONFIGS.write_all()
+
+
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
