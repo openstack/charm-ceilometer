@@ -59,7 +59,6 @@ class CeilometerContext(OSContextGenerator):
             'port': CEILOMETER_PORT,
             'metering_secret': get_shared_secret()
         }
-        ctxt['use_syslog'] = config('use-syslog')
         return ctxt
 
 
