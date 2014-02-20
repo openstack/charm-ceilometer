@@ -34,3 +34,9 @@ options:
     default: openstack
     type: string
     description: RabbitMQ virtual host to request access on rabbitmq-server.
+  use-syslog:
+    type: boolean
+    default: False
+    description: |
+      By default, all services will log into their corresponding log files.
+      Setting this to True will force all services to log to the syslog.
