@@ -15,7 +15,8 @@ from charmhelpers.contrib.openstack.utils import (
 from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install
 
-CEILOMETER_CONF = "/etc/ceilometer/ceilometer.conf"
+CEILOMETER_CONF_DIR = "/etc/ceilometer"
+CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
 
 CEILOMETER_SERVICES = [
     'ceilometer-agent-central',
@@ -44,7 +45,7 @@ CEILOMETER_ROLE = "ResellerAdmin"
 CONFIG_FILES = {
     CEILOMETER_CONF: {
         'hook_contexts': [context.IdentityServiceContext(),
-                          context.AMQPContext(),
+                          context.AMQPContext(ssl_dir=CEILOMETER_CONF_DIR),
                           LoggingConfigContext(),
                           MongoDBContext(),
                           CeilometerContext()],
