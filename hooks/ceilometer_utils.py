@@ -48,7 +48,8 @@ CONFIG_FILES = {
                           context.AMQPContext(ssl_dir=CEILOMETER_CONF_DIR),
                           LoggingConfigContext(),
                           MongoDBContext(),
-                          CeilometerContext()],
+                          CeilometerContext(),
+                          context.SyslogContext()],
         'services': CEILOMETER_SERVICES
     }
 }
