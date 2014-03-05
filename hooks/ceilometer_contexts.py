@@ -9,7 +9,8 @@ from charmhelpers.core.hookenv import (
 
 from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
-    context_complete
+    context_complete,
+    ApacheSSLContext as SSLContext,
 )
 
 CEILOMETER_DB = 'ceilometer'
@@ -72,3 +73,10 @@ class CeilometerServiceContext(OSContextGenerator):
                 if context_complete(conf):
                     return conf
         return {}
+
+
+class ApacheSSLContext(SSLContext):
+
+    service_namespace = "ceilometer"
+
+    external_ports = [CEILOMETER_PORT]

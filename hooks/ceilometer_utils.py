@@ -1,11 +1,16 @@
+import os
+
+from collections import OrderedDict
+
 from charmhelpers.contrib.openstack import (
     templating,
     context,
 )
 from ceilometer_contexts import (
+    ApacheSSLContext,
     LoggingConfigContext,
     MongoDBContext,
-    CeilometerContext
+    CeilometerContext,
 )
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
@@ -17,6 +22,9 @@ from charmhelpers.fetch import apt_update, apt_install
 
 CEILOMETER_CONF_DIR = "/etc/ceilometer"
 CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
+HTTPS_APACHE_CONF = "/etc/apache2/sites-available/openstack_https_frontend"
+HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
+    "openstack_https_frontend.conf"
 
 CEILOMETER_SERVICES = [
     'ceilometer-agent-central',
@@ -28,10 +36,12 @@ CEILOMETER_DB = "ceilometer"
 CEILOMETER_SERVICE = "ceilometer"
 
 CEILOMETER_PACKAGES = [
+    'apache2',
     'ceilometer-agent-central',
     'ceilometer-collector',
     'ceilometer-api'
 ]
+
 
 CEILOMETER_ROLE = "ResellerAdmin"
 
@@ -42,8 +52,9 @@ CEILOMETER_ROLE = "ResellerAdmin"
 #    ('DEFAULT', 'notification_driver', 'ceilometer.compute.nova_notifier')
 #]
 
-CONFIG_FILES = {
-    CEILOMETER_CONF: {
+
+CONFIG_FILES = OrderedDict([
+    (CEILOMETER_CONF, {
         'hook_contexts': [context.IdentityServiceContext(),
                           context.AMQPContext(ssl_dir=CEILOMETER_CONF_DIR),
                           LoggingConfigContext(),
@@ -51,8 +62,16 @@ CONFIG_FILES = {
                           CeilometerContext(),
                           context.SyslogContext()],
         'services': CEILOMETER_SERVICES
-    }
-}
+    }),
+    (HTTPS_APACHE_CONF, {
+        'hook_contexts': [ApacheSSLContext()],
+        'services': ['apache2'],
+    }),
+    (HTTPS_APACHE_24_CONF, {
+        'hook_contexts': [ApacheSSLContext()],
+        'services': ['apache2'],
+    })
+])
 
 TEMPLATES = 'templates'
 
@@ -74,6 +93,12 @@ def register_configs():
     for conf in CONFIG_FILES:
         configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
 
+    if os.path.exists('/etc/apache2/conf-available'):
+        configs.register(HTTPS_APACHE_24_CONF,
+                         CONFIG_FILES[HTTPS_APACHE_24_CONF]['hook_contexts'])
+    else:
+        configs.register(HTTPS_APACHE_CONF,
+                         CONFIG_FILES[HTTPS_APACHE_CONF]['hook_contexts'])
     return configs
 
 
