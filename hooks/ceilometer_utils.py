@@ -47,7 +47,8 @@ CONFIG_FILES = {
                           context.AMQPContext(),
                           LoggingConfigContext(),
                           MongoDBContext(),
-                          CeilometerContext()],
+                          CeilometerContext(),
+                          context.SyslogContext()],
         'services': CEILOMETER_SERVICES
     }
 }

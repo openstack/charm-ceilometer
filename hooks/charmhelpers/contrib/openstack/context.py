@@ -67,6 +67,43 @@ def context_complete(ctxt):
     return True
 
 
+def config_flags_parser(config_flags):
+    if config_flags.find('==') >= 0:
+        log("config_flags is not in expected format (key=value)",
+            level=ERROR)
+        raise OSContextError
+    # strip the following from each value.
+    post_strippers = ' ,'
+    # we strip any leading/trailing '=' or ' ' from the string then
+    # split on '='.
+    split = config_flags.strip(' =').split('=')
+    limit = len(split)
+    flags = {}
+    for i in xrange(0, limit - 1):
+        current = split[i]
+        next = split[i + 1]
+        vindex = next.rfind(',')
+        if (i == limit - 2) or (vindex < 0):
+            value = next
+        else:
+            value = next[:vindex]
+
+        if i == 0:
+            key = current
+        else:
+            # if this not the first entry, expect an embedded key.
+            index = current.rfind(',')
+            if index < 0:
+                log("invalid config value(s) at index %s" % (i),
+                    level=ERROR)
+                raise OSContextError
+            key = current[index + 1:]
+
+        # Add to collection.
+        flags[key.strip(post_strippers)] = value.rstrip(post_strippers)
+    return flags
+
+
 class OSContextGenerator(object):
     interfaces = []
 
@@ -186,7 +223,8 @@ class AMQPContext(OSContextGenerator):
                 if relation_get('ha_queues'):
                     ctxt['rabbitmq_ha_queues'] = relation_get('ha_queues')
                 else:
-                    ctxt['rabbitmq_ha_queues'] = 'False'
+                    ctxt['rabbitmq_ha_queues'] = False
+
                 rabbitmq_hosts = []
                 for unit in related_units(rid):
                     rabbitmq_hosts.append(relation_get('private-address',
@@ -435,6 +473,11 @@ class NeutronContext(object):
         elif self.plugin == 'nvp':
             ctxt.update(self.nvp_ctxt())
 
+        alchemy_flags = config('neutron-alchemy-flags')
+        if alchemy_flags:
+            flags = config_flags_parser(alchemy_flags)
+            ctxt['neutron_alchemy_flags'] = flags
+
         self._save_flag_file()
         return ctxt
 
@@ -455,6 +498,7 @@ class OSConfigFlagContext(OSContextGenerator):
             if not config_flags:
                 return {}
 
+<<<<<<< TREE
             if config_flags.find('==') >= 0:
                 log("config_flags is not in expected format (key=value)",
                     level=ERROR)
@@ -490,6 +534,9 @@ class OSConfigFlagContext(OSContextGenerator):
                 # Add to collection.
                 flags[key.strip(post_strippers)] = value.rstrip(post_strippers)
 
+=======
+            flags = config_flags_parser(config_flags)
+>>>>>>> MERGE-SOURCE
             return {'user_config_flags': flags}
 
 
@@ -579,4 +626,12 @@ class SubordinateConfigContext(OSContextGenerator):
         if not ctxt:
             ctxt['sections'] = {}
 
+        return ctxt
+
+
+class SyslogContext(OSContextGenerator):
+    def __call__(self):
+        ctxt = {
+            'use_syslog': config('use-syslog')
+        }
         return ctxt
