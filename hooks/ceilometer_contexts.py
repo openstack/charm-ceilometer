@@ -79,4 +79,4 @@ class ApacheSSLContext(SSLContext):
 
     service_namespace = "ceilometer"
 
-    external_ports = [CEILOMETER_PORT]
+    external_ports = [CEILOMETER_PORT+100]
