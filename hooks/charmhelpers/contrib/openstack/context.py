@@ -26,11 +26,10 @@ from charmhelpers.core.hookenv import (
 )
 
 from charmhelpers.contrib.hahelpers.cluster import (
+    determine_apache_port,
     determine_api_port,
-    determine_haproxy_port,
     https,
-    is_clustered,
-    peer_units,
+    is_clustered
 )
 
 from charmhelpers.contrib.hahelpers.apache import (
@@ -200,6 +199,7 @@ class AMQPContext(OSContextGenerator):
 
         ctxt = {}
         for rid in relation_ids('amqp'):
+            ha_vip_only = False
             for unit in related_units(rid):
                 if relation_get('clustered', rid=rid, unit=unit):
                     ctxt['clustered'] = True
@@ -214,17 +214,16 @@ class AMQPContext(OSContextGenerator):
                                                       unit=unit),
                     'rabbitmq_virtual_host': vhost,
                 })
+                if relation_get('ha_queues', rid=rid, unit=unit):
+                    ctxt['rabbitmq_ha_queues'] = True
+
+                ha_vip_only = (relation_get('ha-vip-only', rid=rid, unit=unit) == 'True')
+
                 if context_complete(ctxt):
                     # Sufficient information found = break out!
                     break
             # Used for active/active rabbitmq >= grizzly
-            if ('clustered' not in ctxt or relation_get('ha-vip-only') == 'True') and \
-               len(related_units(rid)) > 1:
-                if relation_get('ha_queues'):
-                    ctxt['rabbitmq_ha_queues'] = relation_get('ha_queues')
-                else:
-                    ctxt['rabbitmq_ha_queues'] = False
-
+            if ('clustered' not in ctxt or ha_vip_only) and len(related_units(rid)) > 1:
                 rabbitmq_hosts = []
                 for unit in related_units(rid):
                     rabbitmq_hosts.append(relation_get('private-address',
@@ -243,10 +242,13 @@ class CephContext(OSContextGenerator):
         '''This generates context for /etc/ceph/ceph.conf templates'''
         if not relation_ids('ceph'):
             return {}
+
         log('Generating template context for ceph')
+
         mon_hosts = []
         auth = None
         key = None
+        use_syslog = str(config('use-syslog')).lower()
         for rid in relation_ids('ceph'):
             for unit in related_units(rid):
                 mon_hosts.append(relation_get('private-address', rid=rid,
@@ -258,6 +260,7 @@ class CephContext(OSContextGenerator):
             'mon_hosts': ' '.join(mon_hosts),
             'auth': auth,
             'key': key,
+            'use_syslog': use_syslog
         }
 
         if not os.path.isdir('/etc/ceph'):
@@ -386,17 +389,15 @@ class ApacheSSLContext(OSContextGenerator):
             'private_address': unit_get('private-address'),
             'endpoints': []
         }
-        for ext_port in self.external_ports:
-            if peer_units() or is_clustered():
-                int_port = determine_haproxy_port(ext_port)
-            else:
-                int_port = determine_api_port(ext_port)
+        for api_port in self.external_ports:
+            ext_port = determine_apache_port(api_port)
+            int_port = determine_api_port(api_port)
             portmap = (int(ext_port), int(int_port))
             ctxt['endpoints'].append(portmap)
         return ctxt
 
 
-class NeutronContext(object):
+class NeutronContext(OSContextGenerator):
     interfaces = []
 
     @property
@@ -457,6 +458,22 @@ class NeutronContext(object):
 
         return nvp_ctxt
 
+    def neutron_ctxt(self):
+        if https():
+            proto = 'https'
+        else:
+            proto = 'http'
+        if is_clustered():
+            host = config('vip')
+        else:
+            host = unit_get('private-address')
+        url = '%s://%s:%s' % (proto, host, '9696')
+        ctxt = {
+            'network_manager': self.network_manager,
+            'neutron_url': url,
+        }
+        return ctxt
+
     def __call__(self):
         self._ensure_packages()
 
@@ -466,7 +483,7 @@ class NeutronContext(object):
         if not self.plugin:
             return {}
 
-        ctxt = {'network_manager': self.network_manager}
+        ctxt = self.neutron_ctxt()
 
         if self.plugin == 'ovs':
             ctxt.update(self.ovs_ctxt())
@@ -592,6 +609,7 @@ class SubordinateConfigContext(OSContextGenerator):
 
 
 class SyslogContext(OSContextGenerator):
+
     def __call__(self):
         ctxt = {
             'use_syslog': config('use-syslog')
