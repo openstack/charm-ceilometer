@@ -38,14 +38,22 @@ class CeilometerUtilsTest(CharmTestCase):
 
     def test_restart_map(self):
         restart_map = utils.restart_map()
-        self.assertEquals(restart_map,
-                          {'/etc/ceilometer/ceilometer.conf': [
-                              'ceilometer-agent-central',
-                              'ceilometer-collector',
-                              'ceilometer-api']})
+        self.assertEquals(
+            restart_map,
+            {'/etc/ceilometer/ceilometer.conf': [
+                'ceilometer-agent-central',
+                'ceilometer-collector',
+                'ceilometer-api'],
+             "/etc/apache2/sites-available/openstack_https_frontend": [
+                 'apache2'],
+             "/etc/apache2/sites-available/openstack_https_frontend.conf": [
+                 'apache2']
+             }
+        )
 
     def test_get_ceilometer_conf(self):
         class TestContext():
+
             def __call__(self):
                 return {'data': 'test'}
         with patch.dict(utils.CONFIG_FILES,

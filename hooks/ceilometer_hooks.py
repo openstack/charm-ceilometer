@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import base64
 import sys
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
@@ -110,6 +111,11 @@ def keystone_joined():
 def ceilometer_joined():
     # Pass local context data onto related agent services
     context = get_ceilometer_context()
+    # This value gets tranformed to a path by the context we need to
+    # pass the data to agents.
+    if 'rabbit_ssl_ca' in context:
+        with open(context['rabbit_ssl_ca']) as fh:
+            context['rabbit_ssl_ca'] = base64.b64encode(fh.read())
     for relid in relation_ids('ceilometer-service'):
         relation_set(relid, context)
 
