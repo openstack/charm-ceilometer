@@ -15,7 +15,8 @@ TO_PATCH = [
     'config',
     'log',
     'apt_install',
-    'apt_update'
+    'apt_update',
+    'apt_upgrade',
 ]
 
 

@@ -18,7 +18,7 @@ from charmhelpers.contrib.openstack.utils import (
     configure_installation_source
 )
 from charmhelpers.core.hookenv import config, log
-from charmhelpers.fetch import apt_update, apt_install
+from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
 
 CEILOMETER_CONF_DIR = "/etc/ceilometer"
 CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
@@ -147,6 +147,7 @@ def do_openstack_upgrade(configs):
         '--option', 'Dpkg::Options::=--force-confdef',
     ]
     apt_update(fatal=True)
+    apt_upgrade(options=dpkg_opts, fatal=True, dist=True)
     apt_install(packages=CEILOMETER_PACKAGES,
                 options=dpkg_opts,
                 fatal=True)
