@@ -84,3 +84,13 @@ class CeilometerUtilsTest(CharmTestCase):
         self.configure_installation_source.assert_called_with(
             'cloud:precise-havana'
         )
+
+    def test_get_packages(self):
+        self.get_os_codename_install_source.return_value = 'havana'
+        self.assertEqual(utils.get_packages(),
+                         utils.CEILOMETER_PACKAGES)
+
+    def test_get_packages_icehouse(self):
+        self.get_os_codename_install_source.return_value = 'icehouse'
+        self.assertEqual(utils.get_packages(),
+                         utils.CEILOMETER_PACKAGES + utils.ICEHOUSE_PACKAGES)

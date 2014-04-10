@@ -19,6 +19,7 @@ from charmhelpers.contrib.openstack.utils import (
 )
 from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
+from copy import deepcopy
 
 CEILOMETER_CONF_DIR = "/etc/ceilometer"
 CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
@@ -42,6 +43,11 @@ CEILOMETER_PACKAGES = [
     'ceilometer-api'
 ]
 
+ICEHOUSE_PACKAGES = [
+    'ceilometer-alarm-notifier',
+    'ceilometer-alarm-evaluator',
+    'ceilometer-agent-notification'
+]
 
 CEILOMETER_ROLE = "ResellerAdmin"
 
@@ -148,9 +154,17 @@ def do_openstack_upgrade(configs):
     ]
     apt_update(fatal=True)
     apt_upgrade(options=dpkg_opts, fatal=True, dist=True)
-    apt_install(packages=CEILOMETER_PACKAGES,
+    apt_install(packages=get_packages(),
                 options=dpkg_opts,
                 fatal=True)
 
     # set CONFIGS to load templates from new release
     configs.set_release(openstack_release=new_os_rel)
+
+
+def get_packages():
+    packages = deepcopy(CEILOMETER_PACKAGES)
+    if (get_os_codename_install_source(config('openstack-origin'))
+            >= 'icehouse'):
+        packages = packages + ICEHOUSE_PACKAGES
+    return packages
