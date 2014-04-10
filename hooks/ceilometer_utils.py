@@ -129,8 +129,8 @@ def restart_map():
 def get_ceilometer_context():
     ''' Retrieve a map of all current relation data for agent configuration '''
     ctxt = {}
-    for context in CONFIG_FILES[CEILOMETER_CONF]['hook_contexts']:
-        ctxt.update(context())
+    for hcontext in CONFIG_FILES[CEILOMETER_CONF]['hook_contexts']:
+        ctxt.update(hcontext())
     return ctxt
 
 
