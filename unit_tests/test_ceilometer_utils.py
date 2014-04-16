@@ -15,7 +15,8 @@ TO_PATCH = [
     'config',
     'log',
     'apt_install',
-    'apt_update'
+    'apt_update',
+    'apt_upgrade',
 ]
 
 
@@ -38,14 +39,22 @@ class CeilometerUtilsTest(CharmTestCase):
 
     def test_restart_map(self):
         restart_map = utils.restart_map()
-        self.assertEquals(restart_map,
-                          {'/etc/ceilometer/ceilometer.conf': [
-                              'ceilometer-agent-central',
-                              'ceilometer-collector',
-                              'ceilometer-api']})
+        self.assertEquals(
+            restart_map,
+            {'/etc/ceilometer/ceilometer.conf': [
+                'ceilometer-agent-central',
+                'ceilometer-collector',
+                'ceilometer-api'],
+             "/etc/apache2/sites-available/openstack_https_frontend": [
+                 'apache2'],
+             "/etc/apache2/sites-available/openstack_https_frontend.conf": [
+                 'apache2']
+             }
+        )
 
     def test_get_ceilometer_conf(self):
         class TestContext():
+
             def __call__(self):
                 return {'data': 'test'}
         with patch.dict(utils.CONFIG_FILES,
@@ -75,3 +84,13 @@ class CeilometerUtilsTest(CharmTestCase):
         self.configure_installation_source.assert_called_with(
             'cloud:precise-havana'
         )
+
+    def test_get_packages(self):
+        self.get_os_codename_install_source.return_value = 'havana'
+        self.assertEqual(utils.get_packages(),
+                         utils.CEILOMETER_PACKAGES)
+
+    def test_get_packages_icehouse(self):
+        self.get_os_codename_install_source.return_value = 'icehouse'
+        self.assertEqual(utils.get_packages(),
+                         utils.CEILOMETER_PACKAGES + utils.ICEHOUSE_PACKAGES)

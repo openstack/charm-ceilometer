@@ -1,11 +1,16 @@
+import os
+
+from collections import OrderedDict
+
 from charmhelpers.contrib.openstack import (
     templating,
     context,
 )
 from ceilometer_contexts import (
+    ApacheSSLContext,
     LoggingConfigContext,
     MongoDBContext,
-    CeilometerContext
+    CeilometerContext,
 )
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
@@ -13,9 +18,14 @@ from charmhelpers.contrib.openstack.utils import (
     configure_installation_source
 )
 from charmhelpers.core.hookenv import config, log
-from charmhelpers.fetch import apt_update, apt_install
+from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
+from copy import deepcopy
 
-CEILOMETER_CONF = "/etc/ceilometer/ceilometer.conf"
+CEILOMETER_CONF_DIR = "/etc/ceilometer"
+CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
+HTTPS_APACHE_CONF = "/etc/apache2/sites-available/openstack_https_frontend"
+HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
+    "openstack_https_frontend.conf"
 
 CEILOMETER_SERVICES = [
     'ceilometer-agent-central',
@@ -27,9 +37,16 @@ CEILOMETER_DB = "ceilometer"
 CEILOMETER_SERVICE = "ceilometer"
 
 CEILOMETER_PACKAGES = [
+    'apache2',
     'ceilometer-agent-central',
     'ceilometer-collector',
     'ceilometer-api'
+]
+
+ICEHOUSE_PACKAGES = [
+    'ceilometer-alarm-notifier',
+    'ceilometer-alarm-evaluator',
+    'ceilometer-agent-notification'
 ]
 
 CEILOMETER_ROLE = "ResellerAdmin"
@@ -41,17 +58,26 @@ CEILOMETER_ROLE = "ResellerAdmin"
 #    ('DEFAULT', 'notification_driver', 'ceilometer.compute.nova_notifier')
 #]
 
-CONFIG_FILES = {
-    CEILOMETER_CONF: {
+
+CONFIG_FILES = OrderedDict([
+    (CEILOMETER_CONF, {
         'hook_contexts': [context.IdentityServiceContext(),
-                          context.AMQPContext(),
+                          context.AMQPContext(ssl_dir=CEILOMETER_CONF_DIR),
                           LoggingConfigContext(),
                           MongoDBContext(),
                           CeilometerContext(),
                           context.SyslogContext()],
         'services': CEILOMETER_SERVICES
-    }
-}
+    }),
+    (HTTPS_APACHE_CONF, {
+        'hook_contexts': [ApacheSSLContext()],
+        'services': ['apache2'],
+    }),
+    (HTTPS_APACHE_24_CONF, {
+        'hook_contexts': [ApacheSSLContext()],
+        'services': ['apache2'],
+    })
+])
 
 TEMPLATES = 'templates'
 
@@ -73,6 +99,12 @@ def register_configs():
     for conf in CONFIG_FILES:
         configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
 
+    if os.path.exists('/etc/apache2/conf-available'):
+        configs.register(HTTPS_APACHE_24_CONF,
+                         CONFIG_FILES[HTTPS_APACHE_24_CONF]['hook_contexts'])
+    else:
+        configs.register(HTTPS_APACHE_CONF,
+                         CONFIG_FILES[HTTPS_APACHE_CONF]['hook_contexts'])
     return configs
 
 
@@ -97,8 +129,8 @@ def restart_map():
 def get_ceilometer_context():
     ''' Retrieve a map of all current relation data for agent configuration '''
     ctxt = {}
-    for context in CONFIG_FILES[CEILOMETER_CONF]['hook_contexts']:
-        ctxt.update(context())
+    for hcontext in CONFIG_FILES[CEILOMETER_CONF]['hook_contexts']:
+        ctxt.update(hcontext())
     return ctxt
 
 
@@ -121,9 +153,18 @@ def do_openstack_upgrade(configs):
         '--option', 'Dpkg::Options::=--force-confdef',
     ]
     apt_update(fatal=True)
-    apt_install(packages=CEILOMETER_PACKAGES,
+    apt_upgrade(options=dpkg_opts, fatal=True, dist=True)
+    apt_install(packages=get_packages(),
                 options=dpkg_opts,
                 fatal=True)
 
     # set CONFIGS to load templates from new release
     configs.set_release(openstack_release=new_os_rel)
+
+
+def get_packages():
+    packages = deepcopy(CEILOMETER_PACKAGES)
+    if (get_os_codename_install_source(config('openstack-origin'))
+            >= 'icehouse'):
+        packages = packages + ICEHOUSE_PACKAGES
+    return packages

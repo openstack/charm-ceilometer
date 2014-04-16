@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import base64
 import sys
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
@@ -23,7 +24,7 @@ from charmhelpers.contrib.openstack.utils import (
     openstack_upgrade_available
 )
 from ceilometer_utils import (
-    CEILOMETER_PACKAGES,
+    get_packages,
     CEILOMETER_DB,
     CEILOMETER_SERVICE,
     CEILOMETER_ROLE,
@@ -46,7 +47,7 @@ def install():
         origin = 'cloud:precise-grizzly'
     configure_installation_source(origin)
     apt_update(fatal=True)
-    apt_install(filter_installed_packages(CEILOMETER_PACKAGES),
+    apt_install(filter_installed_packages(get_packages()),
                 fatal=True)
     open_port(CEILOMETER_PORT)
 
@@ -69,6 +70,15 @@ def db_joined():
 def any_changed():
     CONFIGS.write_all()
     ceilometer_joined()
+
+
+@hooks.hook("amqp-relation-departed")
+@restart_on_change(restart_map())
+def amqp_departed():
+    if 'amqp' not in CONFIGS.complete_contexts():
+        log('amqp relation incomplete. Peer not ready?')
+        return
+    CONFIGS.write_all()
 
 
 @hooks.hook('config-changed')
@@ -101,6 +111,11 @@ def keystone_joined():
 def ceilometer_joined():
     # Pass local context data onto related agent services
     context = get_ceilometer_context()
+    # This value gets tranformed to a path by the context we need to
+    # pass the data to agents.
+    if 'rabbit_ssl_ca' in context:
+        with open(context['rabbit_ssl_ca']) as fh:
+            context['rabbit_ssl_ca'] = base64.b64encode(fh.read())
     for relid in relation_ids('ceilometer-service'):
         relation_set(relid, context)
 
