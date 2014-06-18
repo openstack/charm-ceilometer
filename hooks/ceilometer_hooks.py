@@ -34,6 +34,7 @@ from ceilometer_utils import (
     do_openstack_upgrade
 )
 from ceilometer_contexts import CEILOMETER_PORT
+from charmhelpers.payload.execd import execd_preinstall
 
 hooks = Hooks()
 CONFIGS = register_configs()
@@ -41,6 +42,7 @@ CONFIGS = register_configs()
 
 @hooks.hook()
 def install():
+    execd_preinstall()
     origin = config('openstack-origin')
     if (lsb_release()['DISTRIB_CODENAME'] == 'precise'
             and origin == 'distro'):
