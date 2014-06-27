@@ -124,7 +124,7 @@ class CeilometerHooksTest(CharmTestCase):
             service=hooks.CEILOMETER_SERVICE,
             public_url=url, admin_url=url, internal_url=url,
             requested_roles=hooks.CEILOMETER_ROLE,
-            region='myregion')
+            region='myregion', relation_id=None)
 
     def test_ceilometer_joined(self):
         self.relation_ids.return_value = ['ceilometer:0']
