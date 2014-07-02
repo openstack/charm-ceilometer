@@ -18,5 +18,5 @@ sync: bin/charm_helpers_sync.py
 	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers.yaml
 
 publish: lint test
-	bzr push lp:charms/keystone
-	bzr push lp:charms/trusty/keystone
+	bzr push lp:charms/ceilometer
+	bzr push lp:charms/trusty/ceilometer
