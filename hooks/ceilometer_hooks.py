@@ -35,6 +35,10 @@ from ceilometer_utils import (
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.network.ip import get_address_in_network
+from charmhelpers.contrib.openstack.ip import (
+    canonical_url,
+    PUBLIC, INTERNAL, ADMIN
+)
 
 hooks = Hooks()
 CONFIGS = register_configs()
@@ -100,19 +104,16 @@ def upgrade_charm():
 
 @hooks.hook("identity-service-relation-joined")
 def keystone_joined(relid=None):    
-    public_url = "http://{}:{}".format(
-        get_address_in_network(config('os-public-network'),
-                               unit_get("public-address")),
+    public_url = "{}:{}".format(
+        canonical_url(CONFIGS, PUBLIC),
         CEILOMETER_PORT
     )
-    admin_url = "http://{}:{}".format(
-        get_address_in_network(config('os-admin-network'),
-                               unit_get("private-address")),
+    admin_url = "{}:{}".format(
+        canonical_url(CONFIGS, ADMIN),
         CEILOMETER_PORT
     )
-    internal_url = "http://{}:{}".format(
-        get_address_in_network(config('os-internal-network'),
-                               unit_get("private-address")),
+    internal_url = "{}:{}".format(
+        canonical_url(CONFIGS, INTERNAL),
         CEILOMETER_PORT
     )    
     region = config("region")
