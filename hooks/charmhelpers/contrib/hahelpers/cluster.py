@@ -146,12 +146,12 @@ def get_hacluster_config():
     Obtains all relevant configuration from charm configuration required
     for initiating a relation to hacluster:
 
-        ha-bindiface, ha-mcastport, vip, vip_iface, vip_cidr
+        ha-bindiface, ha-mcastport, vip
 
     returns: dict: A dict containing settings keyed by setting name.
     raises: HAIncompleteConfig if settings are missing.
     '''
-    settings = ['ha-bindiface', 'ha-mcastport', 'vip', 'vip_iface', 'vip_cidr']
+    settings = ['ha-bindiface', 'ha-mcastport', 'vip']
     conf = {}
     for setting in settings:
         conf[setting] = config_get(setting)
@@ -163,7 +163,7 @@ def get_hacluster_config():
     return conf
 
 
-def canonical_url(configs, vip_setting='vip', address=None):
+def canonical_url(configs, vip_setting='vip'):
     '''
     Returns the correct HTTP URL to this host given the state of HTTPS
     configuration and hacluster.
@@ -180,5 +180,5 @@ def canonical_url(configs, vip_setting='vip', address=None):
     if is_clustered():
         addr = config_get(vip_setting)
     else:
-        addr = address or unit_get('private-address')
+        addr = unit_get('private-address')
     return '%s://%s' % (scheme, addr)
