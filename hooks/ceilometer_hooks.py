@@ -34,6 +34,11 @@ from ceilometer_utils import (
     do_openstack_upgrade
 )
 from ceilometer_contexts import CEILOMETER_PORT
+from charmhelpers.contrib.network.ip import get_address_in_network
+from charmhelpers.contrib.openstack.ip import (
+    canonical_url,
+    PUBLIC, INTERNAL, ADMIN
+)
 
 hooks = Hooks()
 CONFIGS = register_configs()
@@ -88,7 +93,8 @@ def config_changed():
         do_openstack_upgrade(CONFIGS)
     CONFIGS.write_all()
     ceilometer_joined()
-
+    for rid in relation_ids('identity-service'):
+        keystone_joined(relid=rid)
 
 @hooks.hook('upgrade-charm')
 def upgrade_charm():
@@ -97,12 +103,23 @@ def upgrade_charm():
 
 
 @hooks.hook("identity-service-relation-joined")
-def keystone_joined():
-    url = "http://{}:{}".format(unit_get("private-address"),
-                                CEILOMETER_PORT)
+def keystone_joined(relid=None):    
+    public_url = "{}:{}".format(
+        canonical_url(CONFIGS, PUBLIC),
+        CEILOMETER_PORT
+    )
+    admin_url = "{}:{}".format(
+        canonical_url(CONFIGS, ADMIN),
+        CEILOMETER_PORT
+    )
+    internal_url = "{}:{}".format(
+        canonical_url(CONFIGS, INTERNAL),
+        CEILOMETER_PORT
+    )    
     region = config("region")
-    relation_set(service=CEILOMETER_SERVICE,
-                 public_url=url, admin_url=url, internal_url=url,
+    relation_set(relation_id=relid,
+                 service=CEILOMETER_SERVICE,
+                 public_url=public_url, admin_url=admin_url, internal_url=internal_url,
                  requested_roles=CEILOMETER_ROLE,
                  region=region)
 
