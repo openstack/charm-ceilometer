@@ -28,7 +28,8 @@ TO_PATCH = [
     'unit_get',
     'get_ceilometer_context',
     'lsb_release',
-    'get_packages'
+    'get_packages',
+    'canonical_url'
 ]
 
 
@@ -117,6 +118,7 @@ class CeilometerHooksTest(CharmTestCase):
 
     def test_keystone_joined(self):
         self.unit_get.return_value = 'thishost'
+        self.canonical_url.return_value = "http://thishost"
         self.test_config.set('region', 'myregion')
         hooks.hooks.execute(['hooks/identity-service-relation-joined'])
         url = "http://{}:{}".format('thishost', hooks.CEILOMETER_PORT)
@@ -124,7 +126,7 @@ class CeilometerHooksTest(CharmTestCase):
             service=hooks.CEILOMETER_SERVICE,
             public_url=url, admin_url=url, internal_url=url,
             requested_roles=hooks.CEILOMETER_ROLE,
-            region='myregion')
+            region='myregion', relation_id=None)
 
     def test_ceilometer_joined(self):
         self.relation_ids.return_value = ['ceilometer:0']

@@ -55,4 +55,27 @@ options:
     description: |
       SSL CA to use with the certificate and key provided - this is only
       required if you are providing a privately signed ssl_cert and ssl_key.
+  # Network configuration options
+  # by default all access is over 'private-address'
+  os-admin-network:
+    type: string
+    description: |
+      The IP address and netmask of the OpenStack Admin network (e.g.,
+      192.168.0.0/24)
+      .
+      This network will be used for admin endpoints.
+  os-internal-network:
+    type: string
+    description: |
+      The IP address and netmask of the OpenStack Internal network (e.g.,
+      192.168.0.0/24)
+      .
+      This network will be used for internal endpoints.
+  os-public-network:
+    type: string
+    description: |
+      The IP address and netmask of the OpenStack Public network (e.g.,
+      192.168.0.0/24)
+      .
+      This network will be used for public endpoints.
 
