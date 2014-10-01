@@ -11,7 +11,6 @@ from charmhelpers.core.hookenv import (
     relation_set,
     relation_ids,
     config,
-    unit_get,
     Hooks, UnregisteredHookError,
     log
 )
@@ -34,7 +33,6 @@ from ceilometer_utils import (
     do_openstack_upgrade
 )
 from ceilometer_contexts import CEILOMETER_PORT
-from charmhelpers.contrib.network.ip import get_address_in_network
 from charmhelpers.contrib.openstack.ip import (
     canonical_url,
     PUBLIC, INTERNAL, ADMIN
@@ -96,6 +94,7 @@ def config_changed():
     for rid in relation_ids('identity-service'):
         keystone_joined(relid=rid)
 
+
 @hooks.hook('upgrade-charm')
 def upgrade_charm():
     install()
@@ -103,7 +102,7 @@ def upgrade_charm():
 
 
 @hooks.hook("identity-service-relation-joined")
-def keystone_joined(relid=None):    
+def keystone_joined(relid=None):
     public_url = "{}:{}".format(
         canonical_url(CONFIGS, PUBLIC),
         CEILOMETER_PORT
@@ -115,11 +114,13 @@ def keystone_joined(relid=None):
     internal_url = "{}:{}".format(
         canonical_url(CONFIGS, INTERNAL),
         CEILOMETER_PORT
-    )    
+    )
     region = config("region")
     relation_set(relation_id=relid,
                  service=CEILOMETER_SERVICE,
-                 public_url=public_url, admin_url=admin_url, internal_url=internal_url,
+                 public_url=public_url,
+                 admin_url=admin_url,
+                 internal_url=internal_url,
                  requested_roles=CEILOMETER_ROLE,
                  region=region)
 
