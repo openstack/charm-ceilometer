@@ -51,13 +51,6 @@ ICEHOUSE_PACKAGES = [
 
 CEILOMETER_ROLE = "ResellerAdmin"
 
-#NOVA_CONF = "/etc/nova/nova.conf"
-#NOVA_SETTINGS = [
-#    ('DEFAULT', 'instance_usage_audit', 'True'),
-#    ('DEFAULT', 'instance_usage_audit_period', 'hour'),
-#    ('DEFAULT', 'notification_driver', 'ceilometer.compute.nova_notifier')
-#]
-
 
 CONFIG_FILES = OrderedDict([
     (CEILOMETER_CONF, {
