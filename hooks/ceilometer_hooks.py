@@ -8,6 +8,7 @@ from charmhelpers.fetch import (
 )
 from charmhelpers.core.hookenv import (
     open_port,
+    relation_get,
     relation_set,
     relation_ids,
     config,
@@ -36,6 +37,13 @@ from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
     canonical_url,
     PUBLIC, INTERNAL, ADMIN
+)
+from charmhelpers.contrib.network.ip import (
+    get_iface_for_address,
+    get_netmask_for_address
+)
+from charmhelpers.contrib.hahelpers.cluster import (
+    get_hacluster_config
 )
 
 hooks = Hooks()
@@ -99,6 +107,65 @@ def config_changed():
 def upgrade_charm():
     install()
     any_changed()
+
+
+@hooks.hook('ha-relation-joined')
+def ha_joined():
+    cluster_config = get_hacluster_config()
+
+    resources = {
+        'res_ceilometer_haproxy': 'lsb:haproxy'
+    }
+
+    resource_params = {
+        'res_ceilometer_haproxy': 'op monitor interval="5s"'
+    }
+
+    vip_group = []
+    for vip in cluster_config['vip'].split():
+        res_ceilometer_vip = 'ocf:heartbeat:IPaddr2'
+        vip_params = 'ip'
+
+        iface = get_iface_for_address(vip)
+        if iface is not None:
+            vip_key = 'res_ceilometer_{}_vip'.format(iface)
+            resources[vip_key] = res_ceilometer_vip
+            resource_params[vip_key] = (
+                'params {ip}="{vip}" cidr_netmask="{netmask}"'
+                ' nic="{iface}"'.format(ip=vip_params,
+                                        vip=vip,
+                                        iface=iface,
+                                        netmask=get_netmask_for_address(vip))
+            )
+            vip_group.append(vip_key)
+
+    if len(vip_group) >= 1:
+        relation_set(groups={'grp_ceilometer_vips': ' '.join(vip_group)})
+
+    init_services = {
+        'res_ceilometer_haproxy': 'haproxy'
+    }
+    clones = {
+        'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'
+    }
+    relation_set(init_services=init_services,
+                 corosync_bindiface=cluster_config['ha-bindiface'],
+                 corosync_mcastport=cluster_config['ha-mcastport'],
+                 resources=resources,
+                 resource_params=resource_params,
+                 clones=clones)
+
+
+@hooks.hook('ha-relation-changed')
+def ha_changed():
+    clustered = relation_get('clustered')
+    if not clustered or clustered in [None, 'None', '']:
+        log('ha_changed: hacluster subordinate not fully clustered.')
+    else:
+        log('Cluster configured, notifying other services and updating '
+            'keystone endpoint configuration')
+        for rid in relation_ids('identity-service'):
+            keystone_joined(rid=rid)
 
 
 @hooks.hook("identity-service-relation-joined")
