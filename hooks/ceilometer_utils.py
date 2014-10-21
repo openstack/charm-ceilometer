@@ -10,7 +10,7 @@ from ceilometer_contexts import (
     ApacheSSLContext,
     LoggingConfigContext,
     MongoDBContext,
-    CeilometerContext,
+    CeilometerContext
 )
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
@@ -21,11 +21,13 @@ from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
 from copy import deepcopy
 
+HAPROXY_CONF = '/etc/haproxy/haproxy.cfg'
 CEILOMETER_CONF_DIR = "/etc/ceilometer"
 CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
 HTTPS_APACHE_CONF = "/etc/apache2/sites-available/openstack_https_frontend"
 HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
     "openstack_https_frontend.conf"
+CLUSTER_RES = 'grp_ceilometer_vips'
 
 CEILOMETER_SERVICES = [
     'ceilometer-agent-central',
@@ -37,6 +39,7 @@ CEILOMETER_DB = "ceilometer"
 CEILOMETER_SERVICE = "ceilometer"
 
 CEILOMETER_PACKAGES = [
+    'haproxy',
     'apache2',
     'ceilometer-agent-central',
     'ceilometer-collector',
@@ -61,6 +64,10 @@ CONFIG_FILES = OrderedDict([
                           CeilometerContext(),
                           context.SyslogContext()],
         'services': CEILOMETER_SERVICES
+    }),
+    (HAPROXY_CONF, {
+        'hook_contexts': [context.HAProxyContext()],
+        'services': ['haproxy'],
     }),
     (HTTPS_APACHE_CONF, {
         'hook_contexts': [ApacheSSLContext()],
