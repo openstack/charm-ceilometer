@@ -25,7 +25,6 @@ TO_PATCH = [
     'relation_ids',
     'filter_installed_packages',
     'CONFIGS',
-    'unit_get',
     'get_ceilometer_context',
     'lsb_release',
     'get_packages',
@@ -117,7 +116,6 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(joined.called)
 
     def test_keystone_joined(self):
-        self.unit_get.return_value = 'thishost'
         self.canonical_url.return_value = "http://thishost"
         self.test_config.set('region', 'myregion')
         hooks.hooks.execute(['hooks/identity-service-relation-joined'])
