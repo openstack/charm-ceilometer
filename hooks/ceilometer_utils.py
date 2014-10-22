@@ -10,7 +10,8 @@ from ceilometer_contexts import (
     ApacheSSLContext,
     LoggingConfigContext,
     MongoDBContext,
-    CeilometerContext
+    CeilometerContext,
+    HAProxyContext
 )
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
@@ -66,7 +67,8 @@ CONFIG_FILES = OrderedDict([
         'services': CEILOMETER_SERVICES
     }),
     (HAPROXY_CONF, {
-        'hook_contexts': [context.HAProxyContext()],
+        'hook_contexts': [context.HAProxyContext(),
+                          HAProxyContext()],
         'services': ['haproxy'],
     }),
     (HTTPS_APACHE_CONF, {
