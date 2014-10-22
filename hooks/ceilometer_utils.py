@@ -63,7 +63,8 @@ CONFIG_FILES = OrderedDict([
                           LoggingConfigContext(),
                           MongoDBContext(),
                           CeilometerContext(),
-                          context.SyslogContext()],
+                          context.SyslogContext(),
+                          HAProxyContext()],
         'services': CEILOMETER_SERVICES
     }),
     (HAPROXY_CONF, {
