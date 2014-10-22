@@ -109,6 +109,14 @@ def upgrade_charm():
     any_changed()
 
 
+@hooks.hook('cluster-relation-joined',
+            'cluster-relation-changed',
+            'cluster-relation-departed')
+@restart_on_change(restart_map(), stopstart=True)
+def cluster_changed():
+    CONFIGS.write_all()
+
+
 @hooks.hook('ha-relation-joined')
 def ha_joined():
     cluster_config = get_hacluster_config()
