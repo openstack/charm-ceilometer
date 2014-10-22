@@ -13,6 +13,10 @@ from charmhelpers.contrib.openstack.context import (
     ApacheSSLContext as SSLContext,
 )
 
+from charmhelpers.contrib.hahelpers.cluster import (
+    determine_apache_port
+)
+
 CEILOMETER_DB = 'ceilometer'
 
 
@@ -73,6 +77,22 @@ class CeilometerServiceContext(OSContextGenerator):
                 if context_complete(conf):
                     return conf
         return {}
+
+
+class HAProxyContext(OSContextGenerator):
+    interfaces = ['ceilometer-haproxy']
+
+    def __call__(self):
+        '''Extends the main charmhelpers HAProxyContext with a port mapping
+        specific to this charm.
+        '''
+        haproxy_port = CEILOMETER_PORT
+        apache_port = determine_apache_port(CEILOMETER_PORT)
+
+        ctxt = {
+            'service_ports': {'ceilometer_api': [haproxy_port, apache_port]},
+        }
+        return ctxt
 
 
 class ApacheSSLContext(SSLContext):
