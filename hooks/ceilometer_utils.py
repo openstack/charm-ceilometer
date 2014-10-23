@@ -40,7 +40,8 @@ CEILOMETER_PACKAGES = [
     'apache2',
     'ceilometer-agent-central',
     'ceilometer-collector',
-    'ceilometer-api'
+    'ceilometer-api',
+    'python-pymongo',
 ]
 
 ICEHOUSE_PACKAGES = [
