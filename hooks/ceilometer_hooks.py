@@ -37,6 +37,7 @@ from charmhelpers.contrib.openstack.ip import (
     canonical_url,
     PUBLIC, INTERNAL, ADMIN
 )
+from charmhelpers.contrib.charmsupport.nrpe import NRPE
 
 hooks = Hooks()
 CONFIGS = register_configs()
@@ -89,6 +90,7 @@ def amqp_departed():
 def config_changed():
     if openstack_upgrade_available('ceilometer-common'):
         do_openstack_upgrade(CONFIGS)
+    update_nrpe_config()
     CONFIGS.write_all()
     ceilometer_joined()
     for rid in relation_ids('identity-service'):
@@ -98,6 +100,7 @@ def config_changed():
 @hooks.hook('upgrade-charm')
 def upgrade_charm():
     install()
+    update_nrpe_config()
     any_changed()
 
 
@@ -136,6 +139,27 @@ def ceilometer_joined():
             context['rabbit_ssl_ca'] = base64.b64encode(fh.read())
     for relid in relation_ids('ceilometer-service'):
         relation_set(relid, context)
+
+
+@hooks.hook('nrpe-external-master-relation-joined', 'nrpe-external-master-relation-changed')
+def update_nrpe_config():
+    SERVICES = [
+        'ceilometer-alarm-evaluator',
+        'ceilometer-alarm-notifier',
+        'ceilometer-api',
+        'ceilometer-collector',
+    ]
+    nrpe = NRPE()
+    apt_install('python-dbus')
+    
+    for service in SERVICES:
+        nrpe.add_check(
+            shortname=service,
+            description='%s process' % service,
+            check_cmd = 'check_upstart_job %s' % service,
+            )
+
+    nrpe.write()
 
 if __name__ == '__main__':
     try:
