@@ -10,6 +10,7 @@ from charmhelpers.core.hookenv import (
     open_port,
     relation_set,
     relation_ids,
+    relations_of_type,
     config,
     Hooks, UnregisteredHookError,
     log
@@ -149,7 +150,13 @@ def update_nrpe_config():
         'ceilometer-api',
         'ceilometer-collector',
     ]
-    nrpe = NRPE()
+    # Find out if nrpe set nagios_hostname
+    hostname = None
+    for rel in relations_of_type('nrpe-external-master'):
+        if 'nagios_hostname' in rel:
+            hostname = rel['nagios_hostname']
+            break
+    nrpe = NRPE(hostname=hostname)
     apt_install('python-dbus')
     
     for service in SERVICES:
