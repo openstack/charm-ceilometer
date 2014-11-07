@@ -8,7 +8,8 @@ TO_PATCH = [
     'relation_get',
     'relation_ids',
     'related_units',
-    'config'
+    'config',
+    'os_release'
 ]
 
 
@@ -38,6 +39,7 @@ class CeilometerContextsTest(CharmTestCase):
 
     def test_mongodb_context_not_related(self):
         self.relation_ids.return_value = []
+        self.os_release.return_value = 'icehouse'
         self.assertEquals(contexts.MongoDBContext()(), {})
 
     def test_mongodb_context_related(self):
@@ -51,6 +53,20 @@ class CeilometerContextsTest(CharmTestCase):
         self.assertEquals(contexts.MongoDBContext()(),
                           {'db_host': 'mongodb', 'db_port': 8090,
                            'db_name': 'ceilometer'})
+    
+    def test_mongodb_context_related_replset(self):
+        self.relation_ids.return_value = ['shared-db:0']
+        self.related_units.return_value = ['mongodb/0']
+        data = {
+            'hostname': 'mongodb-0',
+            'port': 8090,
+            'replset': 'replset-1'
+        }
+        self.test_relation.set(data)
+        self.os_release.return_value = 'icehouse'
+        self.assertEquals(contexts.MongoDBContext()(),
+                          {'db_host': 'mongodb-0:8090', 'db_port': 8090,
+                           'db_name': 'ceilometer', 'db_replset': 'replset-1'})
 
     @patch.object(contexts, 'get_shared_secret')
     def test_ceilometer_context(self, secret):
