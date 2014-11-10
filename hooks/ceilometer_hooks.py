@@ -173,7 +173,7 @@ def ha_changed():
         log('Cluster configured, notifying other services and updating '
             'keystone endpoint configuration')
         for rid in relation_ids('identity-service'):
-            keystone_joined(rid=rid)
+            keystone_joined(relid=rid)
 
 
 @hooks.hook("identity-service-relation-joined")
