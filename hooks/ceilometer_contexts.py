@@ -52,7 +52,6 @@ class MongoDBContext(OSContextGenerator):
                 if not support or not replset:
                     if context_complete({'db_host': host, 'db_port': port}):
                         hostnames.append(host)
-                        #print "Either not supported or no replset"
                         break
                 else:
                     hostnames.append('{}:{}'.format(host, port))
@@ -60,7 +59,6 @@ class MongoDBContext(OSContextGenerator):
         # If there aren't any hosts, then there's no real configuration
         # to fill in here, so bail early
         if port is None or port == '':
-            #print "Exiting early {}, {}".format(len(hostnames), port)
             return {}
         
         conf = {
