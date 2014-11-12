@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from collections import OrderedDict
 
@@ -83,6 +84,8 @@ CONFIG_FILES = OrderedDict([
 ])
 
 TEMPLATES = 'templates'
+
+SHARED_SECRET = "/etc/ceilometer/secret.txt"
 
 
 def register_configs():
@@ -171,3 +174,28 @@ def get_packages():
             >= 'icehouse'):
         packages = packages + ICEHOUSE_PACKAGES
     return packages
+
+
+def get_shared_secret():
+    """
+    Returns the current shared secret for the ceilometer node. If the shared
+    secret does not exist, this method will generate one.
+    """
+    secret = None
+    if not os.path.exists(SHARED_SECRET):
+        secret = str(uuid.uuid4())
+        set_shared_secret(secret)
+    else:
+        with open(SHARED_SECRET, 'r') as secret_file:
+            secret = secret_file.read().strip()
+    return secret
+
+
+def set_shared_secret(secret):
+    """
+    Sets the shared secret which is used to sign ceilometer messages.
+    
+    :param secret: the secret to set
+    """
+    with open(SHARED_SECRET, 'w') as secret_file:
+        secret_file.write(secret)
