@@ -31,7 +31,9 @@ from ceilometer_utils import (
     register_configs,
     restart_map,
     get_ceilometer_context,
-    do_openstack_upgrade
+    get_shared_secret,
+    do_openstack_upgrade,
+    set_shared_secret
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -43,7 +45,8 @@ from charmhelpers.contrib.network.ip import (
     get_netmask_for_address
 )
 from charmhelpers.contrib.hahelpers.cluster import (
-    get_hacluster_config
+    get_hacluster_config,
+    is_elected_leader
 )
 
 hooks = Hooks()
@@ -109,11 +112,29 @@ def upgrade_charm():
     any_changed()
 
 
-@hooks.hook('cluster-relation-joined',
-            'cluster-relation-changed',
+@hooks.hook('cluster-relation-joined')
+@restart_on_change(restart_map(), stopstart=True)
+def cluster_joined():
+    vip = get_hacluster_config()['vip'].split()[0]
+    resource = 'res_ceilometer_{}_vip'.format(get_iface_for_address(vip))
+    
+    # If this node is the elected leader then share our secret with other nodes
+    if is_elected_leader(resource):
+        relation_set(shared_secret=get_shared_secret())
+
+    CONFIGS.write_all()
+
+
+@hooks.hook('cluster-relation-changed',
             'cluster-relation-departed')
 @restart_on_change(restart_map(), stopstart=True)
 def cluster_changed():
+    shared_secret = relation_get('shared_secret')
+    if shared_secret is None or shared_secret.strip() == '':
+        log('waiting for shared secret to be provided by leader')
+    elif not shared_secret == get_shared_secret():
+        set_shared_secret(shared_secret)
+    
     CONFIGS.write_all()
 
 

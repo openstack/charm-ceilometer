@@ -1,5 +1,4 @@
 import os
-import uuid
 from charmhelpers.core.hookenv import (
     relation_ids,
     relation_get,
@@ -32,66 +31,52 @@ class MongoDBContext(OSContextGenerator):
     interfaces = ['mongodb']
 
     def __call__(self):
-        hostnames = []
-        port = None
+        mongo_servers = []
         replset = None
-        # TODO(wolsen) add a check in which will only execute this on a
-        # supported level of ceilometer code, which would be a specific version
-        # of the code, not just icehouse.
-        support = os_release('ceilometer-api') >= 'icehouse'
+        use_replset = os_release('ceilometer-api') >= 'icehouse'
         
         for relid in relation_ids('shared-db'):
-            for unit in related_units(relid):
-                replset = relation_get('replset', unit, relid)
+            rel_units = related_units(relid)
+            use_replset = use_replset and (len(rel_units) > 1)
+            
+            for unit in rel_units:
                 host = relation_get('hostname', unit, relid)
-                if port is None:
-                    port = relation_get('port', unit, relid)
+                port = relation_get('port', unit, relid)
                 
-                # If replica sets aren't used or aren't supported by ceilometer
-                # then stop looping if there is enough data 
-                if not support or not replset:
-                    if context_complete({'db_host': host, 'db_port': port}):
-                        hostnames.append(host)
-                        break
+                if not use_replset:
+                    conf = {
+                        "db_host": host,
+                        "db_port": port,
+                        "db_name": CEILOMETER_DB
+                    }
+                    
+                    if context_complete(conf):
+                        return conf
                 else:
-                    hostnames.append('{}:{}'.format(host, port))
-
-        # If there aren't any hosts, then there's no real configuration
-        # to fill in here, so bail early
-        if port is None or port == '':
-            return {}
+                    if replset is None:
+                        replset = relation_get('replset', unit, relid)
+                    
+                    mongo_servers.append('{}:{}'.format(host, port))
         
-        conf = {
-            'db_host': ','.join(hostnames),
-            'db_port': port,
-            'db_name': CEILOMETER_DB
-        }
+        if mongo_servers:
+            conf = {
+                'db_mongo_servers': ','.join(mongo_servers),
+                'db_name': CEILOMETER_DB,
+                'db_replset': replset
+            }
+            return conf
 
-        if replset:
-            conf['db_replset'] = replset
+        return {}
 
-        return conf
-
-
-SHARED_SECRET = "/etc/ceilometer/secret.txt"
-
-
-def get_shared_secret():
-    secret = None
-    if not os.path.exists(SHARED_SECRET):
-        secret = str(uuid.uuid4())
-        with open(SHARED_SECRET, 'w') as secret_file:
-            secret_file.write(secret)
-    else:
-        with open(SHARED_SECRET, 'r') as secret_file:
-            secret = secret_file.read().strip()
-    return secret
 
 CEILOMETER_PORT = 8777
 
 
 class CeilometerContext(OSContextGenerator):
     def __call__(self):
+        # Lazy-import to avoid a circular dependency in the imports
+        from ceilometer_utils import get_shared_secret
+
         ctxt = {
             'port': CEILOMETER_PORT,
             'metering_secret': get_shared_secret()
