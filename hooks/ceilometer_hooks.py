@@ -143,11 +143,13 @@ def ha_joined():
     cluster_config = get_hacluster_config()
 
     resources = {
-        'res_ceilometer_haproxy': 'lsb:haproxy'
+        'res_ceilometer_haproxy': 'lsb:haproxy',
+        'res_ceilometer_agent_central': 'upstart:ceilometer-agent-central'
     }
-
+    
     resource_params = {
-        'res_ceilometer_haproxy': 'op monitor interval="5s"'
+        'res_ceilometer_haproxy': 'op monitor interval="5s"',
+        'res_ceilometer_agent_central': 'op monitor interval="30s"'
     }
 
     vip_group = []
