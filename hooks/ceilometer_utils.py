@@ -194,7 +194,7 @@ def get_shared_secret():
 def set_shared_secret(secret):
     """
     Sets the shared secret which is used to sign ceilometer messages.
-    
+
     :param secret: the secret to set
     """
     with open(SHARED_SECRET, 'w') as secret_file:

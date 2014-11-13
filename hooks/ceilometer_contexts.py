@@ -1,4 +1,3 @@
-import os
 from charmhelpers.core.hookenv import (
     relation_ids,
     relation_get,
@@ -34,30 +33,30 @@ class MongoDBContext(OSContextGenerator):
         mongo_servers = []
         replset = None
         use_replset = os_release('ceilometer-api') >= 'icehouse'
-        
+
         for relid in relation_ids('shared-db'):
             rel_units = related_units(relid)
             use_replset = use_replset and (len(rel_units) > 1)
-            
+
             for unit in rel_units:
                 host = relation_get('hostname', unit, relid)
                 port = relation_get('port', unit, relid)
-                
+
                 if not use_replset:
                     conf = {
                         "db_host": host,
                         "db_port": port,
                         "db_name": CEILOMETER_DB
                     }
-                    
+
                     if context_complete(conf):
                         return conf
                 else:
                     if replset is None:
                         replset = relation_get('replset', unit, relid)
-                    
+
                     mongo_servers.append('{}:{}'.format(host, port))
-        
+
         if mongo_servers:
             conf = {
                 'db_mongo_servers': ','.join(mongo_servers),

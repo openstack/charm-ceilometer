@@ -115,11 +115,8 @@ def upgrade_charm():
 @hooks.hook('cluster-relation-joined')
 @restart_on_change(restart_map(), stopstart=True)
 def cluster_joined():
-    vip = get_hacluster_config()['vip'].split()[0]
-    resource = 'res_ceilometer_{}_vip'.format(get_iface_for_address(vip))
-    
     # If this node is the elected leader then share our secret with other nodes
-    if is_elected_leader(resource):
+    if is_elected_leader('grp_ceilometer_vips'):
         relation_set(shared_secret=get_shared_secret())
 
     CONFIGS.write_all()
@@ -134,7 +131,7 @@ def cluster_changed():
         log('waiting for shared secret to be provided by leader')
     elif not shared_secret == get_shared_secret():
         set_shared_secret(shared_secret)
-    
+
     CONFIGS.write_all()
 
 
@@ -146,7 +143,7 @@ def ha_joined():
         'res_ceilometer_haproxy': 'lsb:haproxy',
         'res_ceilometer_agent_central': 'upstart:ceilometer-agent-central'
     }
-    
+
     resource_params = {
         'res_ceilometer_haproxy': 'op monitor interval="5s"',
         'res_ceilometer_agent_central': 'op monitor interval="30s"'
