@@ -13,6 +13,7 @@ ceilometer_utils.register_configs = _register_configs
 from test_utils import CharmTestCase
 
 TO_PATCH = [
+    'relation_get',
     'relation_set',
     'configure_installation_source',
     'openstack_upgrade_available',
@@ -43,7 +44,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}
 
     @patch("charmhelpers.core.hookenv.config")
-    def test_configure_source(self, mcok_config):
+    def test_configure_source(self, mock_config):
         self.test_config.set('openstack-origin', 'cloud:precise-havana')
         hooks.hooks.execute(['hooks/install'])
         self.configure_installation_source.\
@@ -143,3 +144,81 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/ceilometer-service-relation-joined'])
         self.relation_set.assert_called_with('ceilometer:0',
                                              {'test': 'data'})
+
+    @patch("charmhelpers.core.hookenv.config")
+    @patch.object(hooks, 'is_elected_leader')
+    def test_cluster_joined_not_leader(self, mock_leader, mock_config):
+        mock_leader.return_value = False
+
+        hooks.hooks.execute(['hooks/cluster-relation-joined'])
+        self.assertFalse(self.relation_set.called)
+        self.assertTrue(self.CONFIGS.write_all.called)
+
+    @patch("charmhelpers.core.hookenv.config")
+    @patch.object(hooks, 'get_shared_secret')
+    @patch.object(hooks, 'is_elected_leader')
+    def test_cluster_joined_is_leader(self, mock_leader, shared_secret,
+                                      mock_config):
+        mock_leader.return_value = True
+        shared_secret.return_value = 'secret'
+
+        hooks.hooks.execute(['hooks/cluster-relation-joined'])
+        self.assertTrue(self.relation_set.called)
+        self.relation_set.assert_called_with(shared_secret='secret')
+        self.assertTrue(self.CONFIGS.write_all.called)
+
+    @patch("charmhelpers.core.hookenv.config")
+    @patch.object(hooks, 'set_shared_secret')
+    def test_cluster_changed(self, shared_secret, mock_config):
+        self.relation_get.return_value = None
+        hooks.hooks.execute(['hooks/cluster-relation-changed'])
+        self.assertFalse(shared_secret.called)
+
+    @patch("charmhelpers.core.hookenv.config")
+    @patch.object(hooks, 'get_shared_secret')
+    @patch.object(hooks, 'set_shared_secret')
+    def test_cluster_changed_new_secret(self, mock_set_secret, mock_get_secret,
+                                        mock_config):
+        self.relation_get.return_value = "leader_secret"
+        mock_get_secret.return_value = "my_secret"
+        hooks.hooks.execute(['hooks/cluster-relation-changed'])
+        mock_set_secret.assert_called_with("leader_secret")
+
+    @patch("charmhelpers.core.hookenv.config")
+    @patch.object(hooks, 'get_shared_secret')
+    @patch.object(hooks, 'set_shared_secret')
+    def test_cluster_changed_old_secret(self, mock_set_secret, mock_get_secret,
+                                        mock_config):
+        self.relation_get.return_value = "leader_secret"
+        mock_get_secret.return_value = "leader_secret"
+        hooks.hooks.execute(['hooks/cluster-relation-changed'])
+        self.assertEquals(mock_set_secret.call_count, 0)
+
+    @patch("charmhelpers.core.hookenv.config")
+    @patch.object(hooks, 'get_hacluster_config')
+    @patch.object(hooks, 'get_iface_for_address')
+    @patch.object(hooks, 'get_netmask_for_address')
+    def test_ha_joined(self, mock_netmask, mock_iface, mock_cluster_config,
+                       mock_config):
+        mock_cluster_config.return_value = {'vip': '10.0.5.100',
+                                            'ha-bindiface': 'bnd0',
+                                            'ha-mcastport': 5802}
+        mock_iface.return_value = 'eth0'
+        mock_netmask.return_value = '255.255.255.10'
+        hooks.hooks.execute(['hooks/ha-relation-joined'])
+        self.assertEquals(self.relation_set.call_count, 2)
+
+    @patch("charmhelpers.core.hookenv.config")
+    @patch.object(hooks, 'keystone_joined')
+    def test_ha_changed_not_clustered(self, mock_keystone_joined, mock_config):
+        self.relation_get.return_value = None
+        hooks.hooks.execute(['hooks/ha-relation-changed'])
+        self.assertEquals(mock_keystone_joined.call_count, 0)
+
+    @patch("charmhelpers.core.hookenv.config")
+    @patch.object(hooks, 'keystone_joined')
+    def test_ha_changed_clustered(self, mock_keystone_joined, mock_config):
+        self.relation_get.return_value = 'yes'
+        self.relation_ids.return_value = ['identity-service/0']
+        hooks.hooks.execute(['hooks/ha-relation-changed'])
+        self.assertEquals(mock_keystone_joined.call_count, 1)
