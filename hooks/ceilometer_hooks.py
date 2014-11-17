@@ -2,6 +2,7 @@
 
 import base64
 import sys
+import os
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
     apt_update
@@ -31,6 +32,7 @@ from ceilometer_utils import (
     CEILOMETER_ROLE,
     register_configs,
     restart_map,
+    services,
     get_ceilometer_context,
     do_openstack_upgrade
 )
@@ -143,14 +145,9 @@ def ceilometer_joined():
         relation_set(relid, context)
 
 
-@hooks.hook('nrpe-external-master-relation-joined', 'nrpe-external-master-relation-changed')
+@hooks.hook('nrpe-external-master-relation-joined',
+            'nrpe-external-master-relation-changed')
 def update_nrpe_config():
-    SERVICES = [
-        'ceilometer-alarm-evaluator',
-        'ceilometer-alarm-notifier',
-        'ceilometer-api',
-        'ceilometer-collector',
-    ]
     # Find out if nrpe set nagios_hostname
     hostname = None
     host_context = None
@@ -167,12 +164,35 @@ def update_nrpe_config():
     else:
         current_unit = local_unit()
 
-    for service in SERVICES:
-        nrpe.add_check(
-            shortname=service,
-            description='process check {%s}' % current_unit,
-            check_cmd = 'check_upstart_job %s' % service,
-            )
+    services_to_monitor = services()
+
+    for service in services_to_monitor:
+        upstart_init = '/etc/init/%s.conf' % service
+        sysv_init = '/etc/init.d/%s' % service
+        if os.path.exists(upstart_init):
+            nrpe.add_check(
+                shortname=service,
+                description='process check {%s}' % current_unit,
+                check_cmd='check_upstart_job %s' % service,
+                )
+        elif os.path.exists(sysv_init):
+            cronpath = '/etc/cron.d/nagios-service-check-%s' % service
+            checkpath = os.path.join(os.environ['CHARM_DIR'],
+                                     'files/nrpe-external-master',
+                                     'check_exit_status.pl'),
+            cron_template = '*/5 * * * * root \
+%s -s /etc/init.d/%s \
+status > /var/lib/nagios/service-check-%s.txt\n' \
+                            % (checkpath[0], service, service)
+            f = open(cronpath, 'w')
+            f.write(cron_template)
+            f.close()
+            nrpe.add_check(
+                shortname=service,
+                description='process check {%s}' % current_unit,
+                check_cmd='check_status_file.py -f \
+                           /var/lib/nagios/service-check-%s.txt' % service,
+                )
 
     nrpe.write()
 
