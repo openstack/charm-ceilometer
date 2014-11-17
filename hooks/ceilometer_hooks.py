@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import base64
+import os
+import shutil
 import sys
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
@@ -112,9 +114,21 @@ def upgrade_charm():
     any_changed()
 
 
+def install_ceilometer_ocf():
+    dest_file = "/usr/lib/ocf/resource.d/openstack/ceilometer-agent-central"
+    src_file = 'ocf/openstack/ceilometer-agent-central'
+
+    if not os.path.isdir(os.path.dirname(dest_file)):
+        os.makedirs(os.path.dirname(dest_file))
+    if not os.path.exists(dest_file):
+        shutil.copy(src_file, dest_file)
+
+
 @hooks.hook('cluster-relation-joined')
 @restart_on_change(restart_map(), stopstart=True)
 def cluster_joined():
+    install_ceilometer_ocf()
+
     # If this node is the elected leader then share our secret with other nodes
     if is_elected_leader('grp_ceilometer_vips'):
         relation_set(shared_secret=get_shared_secret())
@@ -141,7 +155,8 @@ def ha_joined():
 
     resources = {
         'res_ceilometer_haproxy': 'lsb:haproxy',
-        'res_ceilometer_agent_central': 'upstart:ceilometer-agent-central'
+        'res_ceilometer_agent_central': ('ocf:openstack:'
+                                         'ceilometer-agent-central')
     }
 
     resource_params = {
