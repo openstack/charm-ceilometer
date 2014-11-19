@@ -43,14 +43,14 @@ class CeilometerHooksTest(CharmTestCase):
             ceilometer_utils.CEILOMETER_PACKAGES
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     def test_configure_source(self, mock_config):
         self.test_config.set('openstack-origin', 'cloud:precise-havana')
         hooks.hooks.execute(['hooks/install'])
         self.configure_installation_source.\
             assert_called_with('cloud:precise-havana')
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     def test_install_hook_precise(self, mock_config):
         hooks.hooks.execute(['hooks/install'])
         self.configure_installation_source.\
@@ -62,7 +62,7 @@ class CeilometerHooksTest(CharmTestCase):
             fatal=True
         )
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     def test_install_hook_distro(self, mock_config):
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'saucy'}
         hooks.hooks.execute(['hooks/install'])
@@ -75,27 +75,27 @@ class CeilometerHooksTest(CharmTestCase):
             fatal=True
         )
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     def test_amqp_joined(self, mock_config):
         hooks.hooks.execute(['hooks/amqp-relation-joined'])
         self.relation_set.assert_called_with(
             username=self.test_config.get('rabbit-user'),
             vhost=self.test_config.get('rabbit-vhost'))
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     def test_db_joined(self, mock_config):
         hooks.hooks.execute(['hooks/shared-db-relation-joined'])
         self.relation_set.assert_called_with(
             ceilometer_database='ceilometer')
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     def test_any_changed(self, joined, mock_config):
         hooks.hooks.execute(['hooks/shared-db-relation-changed'])
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'install')
     @patch.object(hooks, 'any_changed')
     def test_upgrade_charm(self, changed, install, mock_config):
@@ -103,7 +103,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(changed.called)
         self.assertTrue(install.called)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     def test_config_changed_no_upgrade(self, joined, mock_config):
         self.openstack_upgrade_available.return_value = False
@@ -114,7 +114,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     def test_config_changed_upgrade(self, joined, mock_config):
         self.openstack_upgrade_available.return_value = True
@@ -125,7 +125,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     def test_keystone_joined(self, mock_config):
         self.canonical_url.return_value = "http://thishost"
         self.test_config.set('region', 'myregion')
@@ -137,7 +137,7 @@ class CeilometerHooksTest(CharmTestCase):
             requested_roles=hooks.CEILOMETER_ROLE,
             region='myregion', relation_id=None)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     def test_ceilometer_joined(self, mock_config):
         self.relation_ids.return_value = ['ceilometer:0']
         self.get_ceilometer_context.return_value = {'test': 'data'}
@@ -145,7 +145,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.relation_set.assert_called_with('ceilometer:0',
                                              {'test': 'data'})
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'install_ceilometer_ocf')
     @patch.object(hooks, 'is_elected_leader')
     def test_cluster_joined_not_leader(self, mock_leader, mock_install_ocf,
@@ -156,7 +156,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertFalse(self.relation_set.called)
         self.assertTrue(self.CONFIGS.write_all.called)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'get_shared_secret')
     @patch.object(hooks, 'install_ceilometer_ocf')
     @patch.object(hooks, 'is_elected_leader')
@@ -170,14 +170,14 @@ class CeilometerHooksTest(CharmTestCase):
         self.relation_set.assert_called_with(shared_secret='secret')
         self.assertTrue(self.CONFIGS.write_all.called)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'set_shared_secret')
     def test_cluster_changed(self, shared_secret, mock_config):
         self.relation_get.return_value = None
         hooks.hooks.execute(['hooks/cluster-relation-changed'])
         self.assertFalse(shared_secret.called)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'get_shared_secret')
     @patch.object(hooks, 'set_shared_secret')
     def test_cluster_changed_new_secret(self, mock_set_secret, mock_get_secret,
@@ -187,7 +187,7 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/cluster-relation-changed'])
         mock_set_secret.assert_called_with("leader_secret")
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'get_shared_secret')
     @patch.object(hooks, 'set_shared_secret')
     def test_cluster_changed_old_secret(self, mock_set_secret, mock_get_secret,
@@ -197,7 +197,7 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/cluster-relation-changed'])
         self.assertEquals(mock_set_secret.call_count, 0)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'get_hacluster_config')
     @patch.object(hooks, 'get_iface_for_address')
     @patch.object(hooks, 'get_netmask_for_address')
@@ -211,14 +211,14 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/ha-relation-joined'])
         self.assertEquals(self.relation_set.call_count, 2)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'keystone_joined')
     def test_ha_changed_not_clustered(self, mock_keystone_joined, mock_config):
         self.relation_get.return_value = None
         hooks.hooks.execute(['hooks/ha-relation-changed'])
         self.assertEquals(mock_keystone_joined.call_count, 0)
 
-    @patch("charmhelpers.core.hookenv.config")
+    @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'keystone_joined')
     def test_ha_changed_clustered(self, mock_keystone_joined, mock_config):
         self.relation_get.return_value = 'yes'
