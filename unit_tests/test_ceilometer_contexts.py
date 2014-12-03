@@ -6,11 +6,11 @@ import ceilometer_utils as utils
 from test_utils import CharmTestCase, mock_open
 
 TO_PATCH = [
+    'config',
     'relation_get',
     'relation_ids',
     'related_units',
-    'config',
-    'os_release'
+    'os_release',
 ]
 
 
@@ -68,6 +68,20 @@ class CeilometerContextsTest(CharmTestCase):
         self.assertEquals(contexts.MongoDBContext()(),
                           {'db_host': 'mongodb-0', 'db_port': 8090,
                            'db_name': 'ceilometer'})
+
+    @patch.object(contexts, 'context_complete')
+    def test_mongodb_context_related_replset_missing_values(self, mock_ctxcmp):
+        mock_ctxcmp.return_value = False
+        self.relation_ids.return_value = ['shared-db:0']
+        self.related_units.return_value = ['mongodb/0']
+        data = {
+            'hostname': None,
+            'port': 8090,
+            'replset': 'replset-1'
+        }
+        self.test_relation.set(data)
+        self.os_release.return_value = 'icehouse'
+        self.assertEquals(contexts.MongoDBContext()(), {})
 
     def test_mongodb_context_related_replset_multiple_mongo(self):
         self.relation_ids.return_value = ['shared-db:0']

@@ -42,28 +42,29 @@ class MongoDBContext(OSContextGenerator):
                 host = relation_get('hostname', unit, relid)
                 port = relation_get('port', unit, relid)
 
+                conf = {
+                    "db_host": host,
+                    "db_port": port,
+                    "db_name": CEILOMETER_DB
+                }
+
+                if not context_complete(conf):
+                    continue
+
                 if not use_replset:
-                    conf = {
-                        "db_host": host,
-                        "db_port": port,
-                        "db_name": CEILOMETER_DB
-                    }
+                    return conf
 
-                    if context_complete(conf):
-                        return conf
-                else:
-                    if replset is None:
-                        replset = relation_get('replset', unit, relid)
+                if replset is None:
+                    replset = relation_get('replset', unit, relid)
 
-                    mongo_servers.append('{}:{}'.format(host, port))
+                mongo_servers.append('{}:{}'.format(host, port))
 
         if mongo_servers:
-            conf = {
+            return {
                 'db_mongo_servers': ','.join(mongo_servers),
                 'db_name': CEILOMETER_DB,
                 'db_replset': replset
             }
-            return conf
 
         return {}
 
