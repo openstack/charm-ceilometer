@@ -81,6 +81,7 @@ def db_joined():
 
 @hooks.hook("amqp-relation-changed",
             "shared-db-relation-changed",
+            "shared-db-relation-departed",
             "identity-service-relation-changed")
 @restart_on_change(restart_map())
 def any_changed():
