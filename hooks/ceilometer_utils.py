@@ -34,7 +34,10 @@ CLUSTER_RES = 'grp_ceilometer_vips'
 CEILOMETER_SERVICES = [
     'ceilometer-agent-central',
     'ceilometer-collector',
-    'ceilometer-api'
+    'ceilometer-api',
+    'ceilometer-alarm-evaluator',
+    'ceilometer-alarm-notifier',
+    'ceilometer-agent-notification',
 ]
 
 CEILOMETER_DB = "ceilometer"
