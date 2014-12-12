@@ -8,6 +8,7 @@ from charmhelpers.fetch import (
 )
 from charmhelpers.core.hookenv import (
     open_port,
+    relation_get,
     relation_set,
     relation_ids,
     config,
@@ -15,6 +16,7 @@ from charmhelpers.core.hookenv import (
     log
 )
 from charmhelpers.core.host import (
+    service_restart,
     restart_on_change,
     lsb_release
 )
@@ -123,6 +125,18 @@ def keystone_joined(relid=None):
                  internal_url=internal_url,
                  requested_roles=CEILOMETER_ROLE,
                  region=region)
+
+
+@hooks.hook('identity-service-notify-relation-joined')
+@hooks.hook('identity-service-notify-relation-changed')
+def identity_service_notify_changed():
+    notifications = relation_get()
+    key = '%s-endpoint-changed' % (CEILOMETER_SERVICE)
+    if key in notifications:
+        # TODO: need to check whether we need to restart this one
+        #service_restart('ceilometer-agent-central')
+        service_restart('ceilometer-alarm-evaluator')
+        service_restart('ceilometer-alarm-notifier')
 
 
 @hooks.hook("ceilometer-service-relation-joined")
