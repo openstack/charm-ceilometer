@@ -14,7 +14,6 @@ from charmhelpers.core.hookenv import (
     config,
     Hooks, UnregisteredHookError,
     log,
-    DEBUG,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -126,16 +125,6 @@ def keystone_joined(relid=None):
                  internal_url=internal_url,
                  requested_roles=CEILOMETER_ROLE,
                  region=region)
-
-
-@hooks.hook('identity-service-notify-relation-joined')
-def identity_service_notify_joined():
-    # This is used to identify which relation_id/units to broadcast
-    # notifications to and must be equivalent to attribute=value used in
-    # identity-service relation.
-    log("Registering service '%s' for keystone notifications" %
-        (CEILOMETER_SERVICE), level=DEBUG)
-    relation_set(service=CEILOMETER_SERVICE)
 
 
 @hooks.hook('identity-service-notify-relation-changed')
