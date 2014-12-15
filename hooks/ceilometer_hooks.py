@@ -127,8 +127,8 @@ def keystone_joined(relid=None):
                  region=region)
 
 
-@hooks.hook('identity-service-notify-relation-changed')
-def identity_service_notify_changed():
+@hooks.hook('identity-service-notifications-relation-changed')
+def identity_service_notifications_changed():
     notifications = relation_get()
     key = '%s-endpoint-changed' % (CEILOMETER_SERVICE)
     if key in notifications:
