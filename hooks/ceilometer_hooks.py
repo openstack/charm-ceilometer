@@ -129,7 +129,12 @@ def keystone_joined(relid=None):
 
 @hooks.hook('identity-service-notifications-relation-changed')
 def identity_service_notifications_changed():
+    """Receive notifications from keystone."""
     notifications = relation_get()
+
+    # Some ceilometer services will create a client and request
+    # the service catalog from keystone on startup. So if
+    # endpoints change we need to restart these services.
     key = '%s-endpoint-changed' % (CEILOMETER_SERVICE)
     if key in notifications:
         service_restart('ceilometer-alarm-evaluator')
