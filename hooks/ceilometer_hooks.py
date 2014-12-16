@@ -127,7 +127,7 @@ def keystone_joined(relid=None):
                  region=region)
 
 
-@hooks.hook('identity-service-notifications-relation-changed')
+@hooks.hook('identity-notifications-relation-changed')
 def identity_service_notifications_changed():
     """Receive notifications from keystone."""
     notifications = relation_get()
