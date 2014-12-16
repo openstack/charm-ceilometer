@@ -128,9 +128,11 @@ def keystone_joined(relid=None):
 
 
 @hooks.hook('identity-notifications-relation-changed')
-def identity_service_notifications_changed():
+def identity_notifications_changed():
     """Receive notifications from keystone."""
     notifications = relation_get()
+    if not notifications:
+        return
 
     # Some ceilometer services will create a client and request
     # the service catalog from keystone on startup. So if
