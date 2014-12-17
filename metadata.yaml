@@ -21,3 +21,5 @@ requires:
     interface: rabbitmq
   identity-service:
     interface: keystone
+  identity-notifications:
+    interface: keystone-notifications
