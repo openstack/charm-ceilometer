@@ -1,4 +1,4 @@
-from mock import patch, MagicMock
+from mock import patch, MagicMock, call
 
 import ceilometer_utils
 # Patch out register_configs for import of hooks
@@ -15,6 +15,7 @@ from test_utils import CharmTestCase
 TO_PATCH = [
     'relation_get',
     'relation_set',
+    'relation_get',
     'configure_installation_source',
     'openstack_upgrade_available',
     'do_openstack_upgrade',
@@ -29,7 +30,8 @@ TO_PATCH = [
     'get_ceilometer_context',
     'lsb_release',
     'get_packages',
-    'canonical_url'
+    'canonical_url',
+    'service_restart',
 ]
 
 
@@ -144,6 +146,21 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/ceilometer-service-relation-joined'])
         self.relation_set.assert_called_with('ceilometer:0',
                                              {'test': 'data'})
+
+    @patch('charmhelpers.core.hookenv.config')
+    def test_identity_notifications_changed(self, mock_config):
+        self.relation_ids.return_value = ['keystone-notifications:0']
+
+        self.relation_get.return_value = None
+        hooks.hooks.execute(['hooks/identity-notifications-relation-changed'])
+
+        self.relation_get.return_value = {('%s-endpoint-changed' %
+                                          (hooks.CEILOMETER_SERVICE)): 1}
+
+        hooks.hooks.execute(['hooks/identity-notifications-relation-changed'])
+        call1 = call('ceilometer-alarm-evaluator')
+        call2 = call('ceilometer-alarm-notifier')
+        self.service_restart.assert_has_calls([call1, call2], any_order=False)
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'install_ceilometer_ocf')
