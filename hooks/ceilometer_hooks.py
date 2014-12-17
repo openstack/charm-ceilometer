@@ -13,6 +13,7 @@ from charmhelpers.core.hookenv import (
     relation_get,
     relation_set,
     relation_ids,
+    related_units,
     config,
     Hooks, UnregisteredHookError,
     log,
@@ -165,6 +166,16 @@ def ha_joined():
         'res_ceilometer_haproxy': 'op monitor interval="5s"',
         'res_ceilometer_agent_central': 'op monitor interval="30s"'
     }
+
+    amqp_ssl_port = None
+    for rel_id in relation_ids('amqp'):
+        for unit in related_units(rel_id):
+            amqp_ssl_port = relation_get('ssl_port', unit, rel_id)
+
+    if amqp_ssl_port:
+        params = ('params amqp_server_port="%s" op monitor interval="30s"' %
+                  (amqp_ssl_port))
+        resource_params['res_ceilometer_agent_central'] = params
 
     vip_group = []
     for vip in cluster_config['vip'].split():
