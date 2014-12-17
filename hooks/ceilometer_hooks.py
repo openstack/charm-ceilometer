@@ -15,9 +15,10 @@ from charmhelpers.core.hookenv import (
     relation_ids,
     config,
     Hooks, UnregisteredHookError,
-    log
+    log,
 )
 from charmhelpers.core.host import (
+    service_restart,
     restart_on_change,
     lsb_release
 )
@@ -234,6 +235,22 @@ def keystone_joined(relid=None):
                  internal_url=internal_url,
                  requested_roles=CEILOMETER_ROLE,
                  region=region)
+
+
+@hooks.hook('identity-notifications-relation-changed')
+def identity_notifications_changed():
+    """Receive notifications from keystone."""
+    notifications = relation_get()
+    if not notifications:
+        return
+
+    # Some ceilometer services will create a client and request
+    # the service catalog from keystone on startup. So if
+    # endpoints change we need to restart these services.
+    key = '%s-endpoint-changed' % (CEILOMETER_SERVICE)
+    if key in notifications:
+        service_restart('ceilometer-alarm-evaluator')
+        service_restart('ceilometer-alarm-notifier')
 
 
 @hooks.hook("ceilometer-service-relation-joined")
