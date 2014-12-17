@@ -228,6 +228,76 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/ha-relation-joined'])
         self.assertEquals(self.relation_set.call_count, 2)
 
+        exp_resources = {
+            'res_ceilometer_haproxy': 'lsb:haproxy',
+            'res_ceilometer_agent_central': ('ocf:openstack:'
+                                             'ceilometer-agent-central'),
+            'res_ceilometer_eth0_vip': 'ocf:heartbeat:IPaddr2'
+        }
+        exp_resource_params = {
+            'res_ceilometer_haproxy': 'op monitor interval="5s"',
+            'res_ceilometer_agent_central': 'op monitor interval="30s"',
+            'res_ceilometer_eth0_vip': ('params ip="10.0.5.100" '
+                                        'cidr_netmask="255.255.255.10" '
+                                        'nic="eth0"')
+        }
+        exp_clones = {'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'}
+        call1 = call(groups={'grp_ceilometer_vips': 'res_ceilometer_eth0_vip'})
+        call2 = call(init_services={'res_ceilometer_haproxy': 'haproxy'},
+                     corosync_bindiface='bnd0',
+                     corosync_mcastport=5802,
+                     resources=exp_resources,
+                     resource_params=exp_resource_params,
+                     clones=exp_clones)
+        self.relation_set.assert_has_calls([call1, call2], any_order=False)
+
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'get_netmask_for_address')
+    @patch.object(hooks, 'get_hacluster_config')
+    @patch.object(hooks, 'get_iface_for_address')
+    @patch.object(hooks, 'relation_ids')
+    @patch.object(hooks, 'related_units')
+    @patch.object(hooks, 'relation_get')
+    def test_ha_joined_ssl(self, mock_rel_get, mock_rel_units, mock_rel_ids,
+                           mock_iface, mock_cluster_config, mock_netmask,
+                           mock_config):
+        mock_rel_ids.return_value = 'amqp:0'
+        mock_rel_units.return_value = 'rabbitmq-server/0'
+        mock_rel_get.return_value = '5671'
+
+        mock_iface.return_value = 'eth0'
+        mock_netmask.return_value = '255.255.255.10'
+        mock_cluster_config.return_value = {'vip': '10.0.5.100',
+                                            'ha-bindiface': 'bnd0',
+                                            'ha-mcastport': 5802}
+
+        hooks.hooks.execute(['hooks/ha-relation-joined'])
+        self.assertEquals(self.relation_set.call_count, 2)
+
+        exp_resources = {
+            'res_ceilometer_haproxy': 'lsb:haproxy',
+            'res_ceilometer_agent_central': ('ocf:openstack:'
+                                             'ceilometer-agent-central'),
+            'res_ceilometer_eth0_vip': 'ocf:heartbeat:IPaddr2'
+        }
+        exp_resource_params = {
+            'res_ceilometer_haproxy': 'op monitor interval="5s"',
+            'res_ceilometer_agent_central': ('params amqp_server_port="5671" '
+                                             'op monitor interval="30s"'),
+            'res_ceilometer_eth0_vip': ('params ip="10.0.5.100" '
+                                        'cidr_netmask="255.255.255.10" '
+                                        'nic="eth0"')
+        }
+        exp_clones = {'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'}
+        call1 = call(groups={'grp_ceilometer_vips': 'res_ceilometer_eth0_vip'})
+        call2 = call(init_services={'res_ceilometer_haproxy': 'haproxy'},
+                     corosync_bindiface='bnd0',
+                     corosync_mcastport=5802,
+                     resources=exp_resources,
+                     resource_params=exp_resource_params,
+                     clones=exp_clones)
+        self.relation_set.assert_has_calls([call1, call2], any_order=False)
+
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'keystone_joined')
     def test_ha_changed_not_clustered(self, mock_keystone_joined, mock_config):
