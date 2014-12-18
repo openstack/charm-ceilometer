@@ -1,14 +1,16 @@
 from mock import patch
 
 import ceilometer_contexts as contexts
+import ceilometer_utils as utils
 
 from test_utils import CharmTestCase, mock_open
 
 TO_PATCH = [
+    'config',
     'relation_get',
     'relation_ids',
     'related_units',
-    'config'
+    'os_release',
 ]
 
 
@@ -38,6 +40,7 @@ class CeilometerContextsTest(CharmTestCase):
 
     def test_mongodb_context_not_related(self):
         self.relation_ids.return_value = []
+        self.os_release.return_value = 'icehouse'
         self.assertEquals(contexts.MongoDBContext()(), {})
 
     def test_mongodb_context_related(self):
@@ -52,7 +55,60 @@ class CeilometerContextsTest(CharmTestCase):
                           {'db_host': 'mongodb', 'db_port': 8090,
                            'db_name': 'ceilometer'})
 
-    @patch.object(contexts, 'get_shared_secret')
+    def test_mongodb_context_related_replset_single_mongo(self):
+        self.relation_ids.return_value = ['shared-db:0']
+        self.related_units.return_value = ['mongodb/0']
+        data = {
+            'hostname': 'mongodb-0',
+            'port': 8090,
+            'replset': 'replset-1'
+        }
+        self.test_relation.set(data)
+        self.os_release.return_value = 'icehouse'
+        self.assertEquals(contexts.MongoDBContext()(),
+                          {'db_host': 'mongodb-0', 'db_port': 8090,
+                           'db_name': 'ceilometer'})
+
+    @patch.object(contexts, 'context_complete')
+    def test_mongodb_context_related_replset_missing_values(self, mock_ctxcmp):
+        mock_ctxcmp.return_value = False
+        self.relation_ids.return_value = ['shared-db:0']
+        self.related_units.return_value = ['mongodb/0']
+        data = {
+            'hostname': None,
+            'port': 8090,
+            'replset': 'replset-1'
+        }
+        self.test_relation.set(data)
+        self.os_release.return_value = 'icehouse'
+        self.assertEquals(contexts.MongoDBContext()(), {})
+
+    def test_mongodb_context_related_replset_multiple_mongo(self):
+        self.relation_ids.return_value = ['shared-db:0']
+        related_units = {
+            'mongodb/0': {'hostname': 'mongodb-0',
+                          'port': 8090,
+                          'replset': 'replset-1'},
+            'mongodb/1': {'hostname': 'mongodb-1',
+                          'port': 8090,
+                          'replset': 'replset-1'}
+        }
+        self.related_units.return_value = [k for k in related_units.keys()]
+
+        def relation_get(attr, unit, relid):
+            values = related_units.get(unit)
+            if attr is None:
+                return values
+            else:
+                return values.get(attr, None)
+        self.relation_get.side_effect = relation_get
+
+        self.os_release.return_value = 'icehouse'
+        self.assertEquals(contexts.MongoDBContext()(),
+                          {'db_mongo_servers': 'mongodb-0:8090,mongodb-1:8090',
+                           'db_name': 'ceilometer', 'db_replset': 'replset-1'})
+
+    @patch.object(utils, 'get_shared_secret')
     def test_ceilometer_context(self, secret):
         secret.return_value = 'mysecret'
         self.assertEquals(contexts.CeilometerContext()(),
@@ -75,8 +131,8 @@ class CeilometerContextsTest(CharmTestCase):
     @patch('os.path.exists')
     def test_get_shared_secret_existing(self, exists):
         exists.return_value = True
-        with mock_open(contexts.SHARED_SECRET, u'mysecret'):
-            self.assertEquals(contexts.get_shared_secret(),
+        with mock_open(utils.SHARED_SECRET, u'mysecret'):
+            self.assertEquals(utils.get_shared_secret(),
                               'mysecret')
 
     @patch('uuid.uuid4')
@@ -85,5 +141,21 @@ class CeilometerContextsTest(CharmTestCase):
         exists.return_value = False
         uuid4.return_value = 'newsecret'
         with patch('__builtin__.open'):
-            self.assertEquals(contexts.get_shared_secret(),
+            self.assertEquals(utils.get_shared_secret(),
                               'newsecret')
+
+    @patch.object(contexts, 'determine_apache_port')
+    @patch.object(contexts, 'determine_api_port')
+    def test_ha_proxy_context(self, determine_api_port, determine_apache_port):
+        determine_api_port.return_value = contexts.CEILOMETER_PORT - 10
+        determine_apache_port.return_value = contexts.CEILOMETER_PORT - 20
+
+        haproxy_port = contexts.CEILOMETER_PORT
+        api_port = haproxy_port - 10
+        apache_port = api_port - 10
+
+        expected = {
+            'service_ports': {'ceilometer_api': [haproxy_port, apache_port]},
+            'port': api_port
+        }
+        self.assertEquals(contexts.HAProxyContext()(), expected)

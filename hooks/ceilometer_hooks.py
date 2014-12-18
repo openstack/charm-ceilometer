@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import base64
+import os
+import shutil
 import sys
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
@@ -11,6 +13,7 @@ from charmhelpers.core.hookenv import (
     relation_get,
     relation_set,
     relation_ids,
+    related_units,
     config,
     Hooks, UnregisteredHookError,
     log,
@@ -32,12 +35,22 @@ from ceilometer_utils import (
     register_configs,
     restart_map,
     get_ceilometer_context,
-    do_openstack_upgrade
+    get_shared_secret,
+    do_openstack_upgrade,
+    set_shared_secret
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
     canonical_url,
     PUBLIC, INTERNAL, ADMIN
+)
+from charmhelpers.contrib.network.ip import (
+    get_iface_for_address,
+    get_netmask_for_address
+)
+from charmhelpers.contrib.hahelpers.cluster import (
+    get_hacluster_config,
+    is_elected_leader
 )
 
 hooks = Hooks()
@@ -70,6 +83,7 @@ def db_joined():
 
 @hooks.hook("amqp-relation-changed",
             "shared-db-relation-changed",
+            "shared-db-relation-departed",
             "identity-service-relation-changed")
 @restart_on_change(restart_map())
 def any_changed():
@@ -101,6 +115,113 @@ def config_changed():
 def upgrade_charm():
     install()
     any_changed()
+
+
+def install_ceilometer_ocf():
+    dest_file = "/usr/lib/ocf/resource.d/openstack/ceilometer-agent-central"
+    src_file = 'ocf/openstack/ceilometer-agent-central'
+
+    if not os.path.isdir(os.path.dirname(dest_file)):
+        os.makedirs(os.path.dirname(dest_file))
+    if not os.path.exists(dest_file):
+        shutil.copy(src_file, dest_file)
+
+
+@hooks.hook('cluster-relation-joined')
+@restart_on_change(restart_map(), stopstart=True)
+def cluster_joined():
+    install_ceilometer_ocf()
+
+    # If this node is the elected leader then share our secret with other nodes
+    if is_elected_leader('grp_ceilometer_vips'):
+        relation_set(shared_secret=get_shared_secret())
+
+    CONFIGS.write_all()
+
+
+@hooks.hook('cluster-relation-changed',
+            'cluster-relation-departed')
+@restart_on_change(restart_map(), stopstart=True)
+def cluster_changed():
+    shared_secret = relation_get('shared_secret')
+    if shared_secret is None or shared_secret.strip() == '':
+        log('waiting for shared secret to be provided by leader')
+    elif not shared_secret == get_shared_secret():
+        set_shared_secret(shared_secret)
+
+    CONFIGS.write_all()
+
+
+@hooks.hook('ha-relation-joined')
+def ha_joined():
+    cluster_config = get_hacluster_config()
+
+    resources = {
+        'res_ceilometer_haproxy': 'lsb:haproxy',
+        'res_ceilometer_agent_central': ('ocf:openstack:'
+                                         'ceilometer-agent-central')
+    }
+
+    resource_params = {
+        'res_ceilometer_haproxy': 'op monitor interval="5s"',
+        'res_ceilometer_agent_central': 'op monitor interval="30s"'
+    }
+
+    amqp_ssl_port = None
+    for rel_id in relation_ids('amqp'):
+        for unit in related_units(rel_id):
+            amqp_ssl_port = relation_get('ssl_port', unit, rel_id)
+
+    if amqp_ssl_port:
+        params = ('params amqp_server_port="%s" op monitor interval="30s"' %
+                  (amqp_ssl_port))
+        resource_params['res_ceilometer_agent_central'] = params
+
+    vip_group = []
+    for vip in cluster_config['vip'].split():
+        res_ceilometer_vip = 'ocf:heartbeat:IPaddr2'
+        vip_params = 'ip'
+
+        iface = get_iface_for_address(vip)
+        if iface is not None:
+            vip_key = 'res_ceilometer_{}_vip'.format(iface)
+            resources[vip_key] = res_ceilometer_vip
+            resource_params[vip_key] = (
+                'params {ip}="{vip}" cidr_netmask="{netmask}"'
+                ' nic="{iface}"'.format(ip=vip_params,
+                                        vip=vip,
+                                        iface=iface,
+                                        netmask=get_netmask_for_address(vip))
+            )
+            vip_group.append(vip_key)
+
+    if len(vip_group) >= 1:
+        relation_set(groups={'grp_ceilometer_vips': ' '.join(vip_group)})
+
+    init_services = {
+        'res_ceilometer_haproxy': 'haproxy'
+    }
+    clones = {
+        'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'
+    }
+    relation_set(init_services=init_services,
+                 corosync_bindiface=cluster_config['ha-bindiface'],
+                 corosync_mcastport=cluster_config['ha-mcastport'],
+                 resources=resources,
+                 resource_params=resource_params,
+                 clones=clones)
+
+
+@hooks.hook('ha-relation-changed')
+def ha_changed():
+    clustered = relation_get('clustered')
+    if not clustered or clustered in [None, 'None', '']:
+        log('ha_changed: hacluster subordinate not fully clustered.')
+    else:
+        log('Cluster configured, notifying other services and updating '
+            'keystone endpoint configuration')
+        for rid in relation_ids('identity-service'):
+            keystone_joined(relid=rid)
 
 
 @hooks.hook("identity-service-relation-joined")
