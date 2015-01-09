@@ -32,6 +32,7 @@ TO_PATCH = [
     'get_packages',
     'canonical_url',
     'service_restart',
+    'update_nrpe_config',
 ]
 
 
