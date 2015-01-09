@@ -24,3 +24,11 @@ requires:
     interface: rabbitmq
   identity-service:
     interface: keystone
+  identity-notifications:
+    interface: keystone-notifications
+  ha:
+    interface: hacluster
+    scope: container
+peers:
+  cluster:
+    interface: ceilometer-ha

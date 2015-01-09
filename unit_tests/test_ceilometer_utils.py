@@ -44,7 +44,11 @@ class CeilometerUtilsTest(CharmTestCase):
             {'/etc/ceilometer/ceilometer.conf': [
                 'ceilometer-agent-central',
                 'ceilometer-collector',
-                'ceilometer-api'],
+                'ceilometer-api',
+                'ceilometer-alarm-evaluator',
+                'ceilometer-alarm-notifier',
+                'ceilometer-agent-notification'],
+             '/etc/haproxy/haproxy.cfg': ['haproxy'],
              "/etc/apache2/sites-available/openstack_https_frontend": [
                  'apache2'],
              "/etc/apache2/sites-available/openstack_https_frontend.conf": [
