@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from collections import OrderedDict
 
@@ -11,6 +12,7 @@ from ceilometer_contexts import (
     LoggingConfigContext,
     MongoDBContext,
     CeilometerContext,
+    HAProxyContext
 )
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
@@ -21,22 +23,28 @@ from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
 from copy import deepcopy
 
+HAPROXY_CONF = '/etc/haproxy/haproxy.cfg'
 CEILOMETER_CONF_DIR = "/etc/ceilometer"
 CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
 HTTPS_APACHE_CONF = "/etc/apache2/sites-available/openstack_https_frontend"
 HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
     "openstack_https_frontend.conf"
+CLUSTER_RES = 'grp_ceilometer_vips'
 
 CEILOMETER_SERVICES = [
     'ceilometer-agent-central',
     'ceilometer-collector',
-    'ceilometer-api'
+    'ceilometer-api',
+    'ceilometer-alarm-evaluator',
+    'ceilometer-alarm-notifier',
+    'ceilometer-agent-notification',
 ]
 
 CEILOMETER_DB = "ceilometer"
 CEILOMETER_SERVICE = "ceilometer"
 
 CEILOMETER_PACKAGES = [
+    'haproxy',
     'apache2',
     'ceilometer-agent-central',
     'ceilometer-collector',
@@ -66,8 +74,14 @@ CONFIG_FILES = OrderedDict([
                           LoggingConfigContext(),
                           MongoDBContext(),
                           CeilometerContext(),
-                          context.SyslogContext()],
+                          context.SyslogContext(),
+                          HAProxyContext()],
         'services': CEILOMETER_SERVICES
+    }),
+    (HAPROXY_CONF, {
+        'hook_contexts': [context.HAProxyContext(),
+                          HAProxyContext()],
+        'services': ['haproxy'],
     }),
     (HTTPS_APACHE_CONF, {
         'hook_contexts': [ApacheSSLContext()],
@@ -80,6 +94,8 @@ CONFIG_FILES = OrderedDict([
 ])
 
 TEMPLATES = 'templates'
+
+SHARED_SECRET = "/etc/ceilometer/secret.txt"
 
 
 def register_configs():
@@ -181,3 +197,28 @@ def get_packages():
             >= 'icehouse'):
         packages = packages + ICEHOUSE_PACKAGES
     return packages
+
+
+def get_shared_secret():
+    """
+    Returns the current shared secret for the ceilometer node. If the shared
+    secret does not exist, this method will generate one.
+    """
+    secret = None
+    if not os.path.exists(SHARED_SECRET):
+        secret = str(uuid.uuid4())
+        set_shared_secret(secret)
+    else:
+        with open(SHARED_SECRET, 'r') as secret_file:
+            secret = secret_file.read().strip()
+    return secret
+
+
+def set_shared_secret(secret):
+    """
+    Sets the shared secret which is used to sign ceilometer messages.
+
+    :param secret: the secret to set
+    """
+    with open(SHARED_SECRET, 'w') as secret_file:
+        secret_file.write(secret)

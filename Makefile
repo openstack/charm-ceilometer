@@ -5,7 +5,7 @@ lint:
 	@flake8 --exclude hooks/charmhelpers hooks unit_tests
 	@charm proof
 
-test:
+unit_test:
 	@$(PYTHON) /usr/bin/nosetests --nologcapture --with-coverage unit_tests
 
 bin/charm_helpers_sync.py:
@@ -16,6 +16,6 @@ bin/charm_helpers_sync.py:
 sync: bin/charm_helpers_sync.py
 	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers.yaml
 
-publish: lint test
+publish: lint unit_test
 	bzr push lp:charms/ceilometer
 	bzr push lp:charms/trusty/ceilometer
