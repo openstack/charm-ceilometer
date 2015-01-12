@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 import base64
-import os
 import shutil
 import sys
+import os
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
     apt_update
@@ -34,6 +34,7 @@ from ceilometer_utils import (
     CEILOMETER_ROLE,
     register_configs,
     restart_map,
+    services,
     get_ceilometer_context,
     get_shared_secret,
     do_openstack_upgrade,
@@ -44,6 +45,7 @@ from charmhelpers.contrib.openstack.ip import (
     canonical_url,
     PUBLIC, INTERNAL, ADMIN
 )
+from charmhelpers.contrib.charmsupport import nrpe
 from charmhelpers.contrib.network.ip import (
     get_iface_for_address,
     get_netmask_for_address
@@ -105,6 +107,7 @@ def amqp_departed():
 def config_changed():
     if openstack_upgrade_available('ceilometer-common'):
         do_openstack_upgrade(CONFIGS)
+    update_nrpe_config()
     CONFIGS.write_all()
     ceilometer_joined()
     for rid in relation_ids('identity-service'):
@@ -114,6 +117,7 @@ def config_changed():
 @hooks.hook('upgrade-charm')
 def upgrade_charm():
     install()
+    update_nrpe_config()
     any_changed()
 
 
@@ -275,6 +279,19 @@ def ceilometer_joined():
             context['rabbit_ssl_ca'] = base64.b64encode(fh.read())
     for relid in relation_ids('ceilometer-service'):
         relation_set(relid, context)
+
+
+@hooks.hook('nrpe-external-master-relation-joined',
+            'nrpe-external-master-relation-changed')
+def update_nrpe_config():
+    # python-dbus is used by check_upstart_job
+    apt_install('python-dbus')
+    hostname = nrpe.get_nagios_hostname()
+    current_unit = nrpe.get_nagios_unit_name()
+    nrpe_setup = nrpe.NRPE(hostname=hostname)
+    nrpe.add_init_service_checks(nrpe_setup, services(), current_unit)
+    nrpe_setup.write()
+
 
 if __name__ == '__main__':
     try:

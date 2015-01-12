@@ -58,6 +58,12 @@ ICEHOUSE_PACKAGES = [
     'ceilometer-agent-notification'
 ]
 
+ICEHOUSE_SERVICES = [
+    'ceilometer-alarm-notifier',
+    'ceilometer-alarm-evaluator',
+    'ceilometer-agent-notification'
+]
+
 CEILOMETER_ROLE = "ResellerAdmin"
 
 
@@ -106,6 +112,11 @@ def register_configs():
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
 
+    if (get_os_codename_install_source(config('openstack-origin'))
+            >= 'icehouse'):
+        CONFIG_FILES[CEILOMETER_CONF]['services'] = \
+            CONFIG_FILES[CEILOMETER_CONF]['services'] + ICEHOUSE_SERVICES
+
     for conf in CONFIG_FILES:
         configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
 
@@ -134,6 +145,14 @@ def restart_map():
         if svcs:
             _map[f] = svcs
     return _map
+
+
+def services():
+    ''' Returns a list of services associate with this charm '''
+    _services = []
+    for v in restart_map().values():
+        _services = _services + v
+    return list(set(_services))
 
 
 def get_ceilometer_context():

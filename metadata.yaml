@@ -12,6 +12,9 @@ categories:
   - miscellaneous
   - openstack
 provides:
+  nrpe-external-master:
+    interface: nrpe-external-master
+    scope: container
   ceilometer-service:
     interface: ceilometer
 requires:
