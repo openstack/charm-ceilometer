@@ -26,7 +26,8 @@ In order to deploy Ceilometer service, the MongoDB service is required:
 then Keystone and Rabbit relationships need to be established:
 
     juju add-relation ceilometer rabbitmq
-    juju add-relation ceilometer keystone
+    juju add-relation ceilometer keystone:identity-service
+    juju add-relation ceilometer keystone:identity-notifications
 
 In order to capture the calculations, a Ceilometer compute agent needs to be
 installed in each nova node, and be related with Ceilometer service:
