@@ -2,7 +2,7 @@
 PYTHON := /usr/bin/env python
 
 lint:
-	@flake8 --exclude hooks/charmhelpers hooks unit_tests
+	@flake8 --exclude hooks/charmhelpers hooks unit_tests tests
 	@charm proof
 
 unit_test:
@@ -14,7 +14,17 @@ bin/charm_helpers_sync.py:
         > bin/charm_helpers_sync.py
 
 sync: bin/charm_helpers_sync.py
-	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers.yaml
+	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers-hooks.yaml
+	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers-tests.yaml
+
+test:
+	@echo Starting Amulet tests...
+	# coreycb note: The -v should only be temporary until Amulet sends
+	# raise_status() messages to stderr:
+	#   https://bugs.launchpad.net/amulet/+bug/1320357
+	@juju test -v -p AMULET_HTTP_PROXY --timeout 900 \
+        00-setup 14-basic-precise-icehouse 15-basic-trusty-icehouse \
+	16-basic-trusty-juno
 
 publish: lint unit_test
 	bzr push lp:charms/ceilometer
