@@ -1,0 +1,9 @@
+#!/usr/bin/python
+
+"""Amulet tests on a basic ceilometer deployment on trusty-icehouse."""
+
+from basic_deployment import CeilometerBasicDeployment
+
+if __name__ == '__main__':
+    deployment = CeilometerBasicDeployment(series='trusty')
+    deployment.run_tests()
