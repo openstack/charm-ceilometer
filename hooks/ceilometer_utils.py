@@ -65,11 +65,12 @@ ICEHOUSE_SERVICES = [
 ]
 
 CEILOMETER_ROLE = "ResellerAdmin"
-
+SVC = 'ceilometer'
 
 CONFIG_FILES = OrderedDict([
     (CEILOMETER_CONF, {
-        'hook_contexts': [context.IdentityServiceContext(),
+        'hook_contexts': [context.IdentityServiceContext(service=SVC,
+                                                         service_user=SVC),
                           context.AMQPContext(ssl_dir=CEILOMETER_CONF_DIR),
                           LoggingConfigContext(),
                           MongoDBContext(),
