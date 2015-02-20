@@ -1,9 +1,10 @@
 #!/usr/bin/python
-
 import base64
 import shutil
+import subprocess
 import sys
 import os
+
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
     apt_update
@@ -39,7 +40,6 @@ from ceilometer_utils import (
     get_shared_secret,
     do_openstack_upgrade,
     set_shared_secret,
-    configure_https,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -102,6 +102,19 @@ def amqp_departed():
         log('amqp relation incomplete. Peer not ready?')
         return
     CONFIGS.write_all()
+
+
+def configure_https():
+    """Enables SSL API Apache config if appropriate."""
+    # need to write all to ensure changes to the entire request pipeline
+    # propagate (c-api, haprxy, apache)
+    CONFIGS.write_all()
+    if 'https' in CONFIGS.complete_contexts():
+        cmd = ['a2ensite', 'openstack_https_frontend']
+        subprocess.check_call(cmd)
+    else:
+        cmd = ['a2dissite', 'openstack_https_frontend']
+        subprocess.check_call(cmd)
 
 
 @hooks.hook('config-changed')

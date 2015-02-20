@@ -33,6 +33,7 @@ TO_PATCH = [
     'canonical_url',
     'service_restart',
     'update_nrpe_config',
+    'configure_https',
 ]
 
 
