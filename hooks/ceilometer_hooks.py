@@ -116,6 +116,8 @@ def configure_https():
         cmd = ['a2dissite', 'openstack_https_frontend']
         subprocess.check_call(cmd)
 
+    subprocess.check_call(['service', 'apache2', 'reload'])
+
 
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
