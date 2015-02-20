@@ -223,3 +223,16 @@ def set_shared_secret(secret):
     """
     with open(SHARED_SECRET, 'w') as secret_file:
         secret_file.write(secret)
+
+
+def configure_https():
+    """Enables SSL API Apache config if appropriate."""
+    # need to write all to ensure changes to the entire request pipeline
+    # propagate (c-api, haprxy, apache)
+    CONFIGS.write_all()
+    if 'https' in CONFIGS.complete_contexts():
+        cmd = ['a2ensite', 'openstack_https_frontend']
+        check_call(cmd)
+    else:
+        cmd = ['a2dissite', 'openstack_https_frontend']
+        check_call(cmd)

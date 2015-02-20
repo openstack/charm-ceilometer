@@ -38,7 +38,8 @@ from ceilometer_utils import (
     get_ceilometer_context,
     get_shared_secret,
     do_openstack_upgrade,
-    set_shared_secret
+    set_shared_secret,
+    configure_https,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -90,6 +91,7 @@ def db_joined():
 @restart_on_change(restart_map())
 def any_changed():
     CONFIGS.write_all()
+    configure_https()
     ceilometer_joined()
 
 
@@ -110,6 +112,7 @@ def config_changed():
     update_nrpe_config()
     CONFIGS.write_all()
     ceilometer_joined()
+    configure_https()
     for rid in relation_ids('identity-service'):
         keystone_joined(relid=rid)
 
