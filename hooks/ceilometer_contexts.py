@@ -117,6 +117,5 @@ class HAProxyContext(OSContextGenerator):
 
 class ApacheSSLContext(SSLContext):
 
+    external_ports = [CEILOMETER_PORT]
     service_namespace = "ceilometer"
-
-    external_ports = [CEILOMETER_PORT+100]
