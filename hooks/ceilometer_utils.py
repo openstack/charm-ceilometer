@@ -80,7 +80,7 @@ CONFIG_FILES = OrderedDict([
         'services': CEILOMETER_SERVICES
     }),
     (HAPROXY_CONF, {
-        'hook_contexts': [context.HAProxyContext(),
+        'hook_contexts': [context.HAProxyContext(singlenode_mode=True),
                           HAProxyContext()],
         'services': ['haproxy'],
     }),
