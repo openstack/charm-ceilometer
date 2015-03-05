@@ -86,13 +86,20 @@ def db_joined():
 
 @hooks.hook("amqp-relation-changed",
             "shared-db-relation-changed",
-            "shared-db-relation-departed",
-            "identity-service-relation-changed")
+            "shared-db-relation-departed")
 @restart_on_change(restart_map())
 def any_changed():
     CONFIGS.write_all()
     configure_https()
     ceilometer_joined()
+
+
+@hooks.hook("identity-service-relation-changed")
+@restart_on_change(restart_map())
+def identity_service_relation_changed():
+    CONFIGS.write_all()
+    configure_https()
+    keystone_joined()
 
 
 @hooks.hook("amqp-relation-departed")
