@@ -1,9 +1,10 @@
 #!/usr/bin/python
-
 import base64
 import shutil
+import subprocess
 import sys
 import os
+
 from charmhelpers.fetch import (
     apt_install, filter_installed_packages,
     apt_update
@@ -38,7 +39,7 @@ from ceilometer_utils import (
     get_ceilometer_context,
     get_shared_secret,
     do_openstack_upgrade,
-    set_shared_secret
+    set_shared_secret,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -85,12 +86,20 @@ def db_joined():
 
 @hooks.hook("amqp-relation-changed",
             "shared-db-relation-changed",
-            "shared-db-relation-departed",
-            "identity-service-relation-changed")
+            "shared-db-relation-departed")
 @restart_on_change(restart_map())
 def any_changed():
     CONFIGS.write_all()
+    configure_https()
     ceilometer_joined()
+
+
+@hooks.hook("identity-service-relation-changed")
+@restart_on_change(restart_map())
+def identity_service_relation_changed():
+    CONFIGS.write_all()
+    configure_https()
+    keystone_joined()
 
 
 @hooks.hook("amqp-relation-departed")
@@ -102,6 +111,21 @@ def amqp_departed():
     CONFIGS.write_all()
 
 
+def configure_https():
+    """Enables SSL API Apache config if appropriate."""
+    # need to write all to ensure changes to the entire request pipeline
+    # propagate (c-api, haprxy, apache)
+    CONFIGS.write_all()
+    if 'https' in CONFIGS.complete_contexts():
+        cmd = ['a2ensite', 'openstack_https_frontend']
+        subprocess.check_call(cmd)
+    else:
+        cmd = ['a2dissite', 'openstack_https_frontend']
+        subprocess.check_call(cmd)
+
+    subprocess.check_call(['service', 'apache2', 'reload'])
+
+
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
@@ -110,6 +134,7 @@ def config_changed():
     update_nrpe_config()
     CONFIGS.write_all()
     ceilometer_joined()
+    configure_https()
     for rid in relation_ids('identity-service'):
         keystone_joined(relid=rid)
 
