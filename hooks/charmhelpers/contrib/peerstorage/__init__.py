@@ -59,7 +59,7 @@ def some_hook():
 
 def relation_set(relation_settings=None, relation_id=None, **kwargs):
     try:
-        if relation_id and relation_id in relation_ids('cluster'):
+        if relation_id in relation_ids('cluster'):
             return leader_set(settings=relation_settings, **kwargs)
         else:
             raise NotImplementedError
@@ -71,7 +71,7 @@ def relation_set(relation_settings=None, relation_id=None, **kwargs):
 
 def relation_get(attribute=None, rid=None, unit=None):
     try:
-        if rid and rid in relation_ids('cluster'):
+        if rid in relation_ids('cluster'):
             return leader_get(attribute)
         else:
             raise NotImplementedError
@@ -121,18 +121,25 @@ def peer_store(key, value, relation_name='cluster'):
                          'peer relation {}'.format(relation_name))
 
 
-def peer_echo(includes=None):
+def peer_echo(includes=None, force=False):
     """Echo filtered attributes back onto the same relation for storage.
 
     This is a requirement to use the peerstorage module - it needs to be called
     from the peer relation's changed hook.
+
+    If Juju leader support exists this will be a noop unless force is True.
     """
     try:
         is_leader()
     except NotImplementedError:
         pass
     else:
-        return  # NOOP if leader-election is supported
+        if not force:
+            return  # NOOP if leader-election is supported
+
+    # Use original non-leader calls
+    relation_get = _relation_get
+    relation_set = _relation_set
 
     rdata = relation_get()
     echo_data = {}
