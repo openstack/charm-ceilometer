@@ -104,8 +104,9 @@ class HAProxyContext(OSContextGenerator):
         specific to this charm.
         '''
         haproxy_port = CEILOMETER_PORT
-        api_port = determine_api_port(CEILOMETER_PORT)
-        apache_port = determine_apache_port(CEILOMETER_PORT)
+        api_port = determine_api_port(CEILOMETER_PORT, singlenode_mode=True)
+        apache_port = determine_apache_port(CEILOMETER_PORT,
+                                            singlenode_mode=True)
 
         ctxt = {
             'service_ports': {'ceilometer_api': [haproxy_port, apache_port]},
@@ -116,6 +117,5 @@ class HAProxyContext(OSContextGenerator):
 
 class ApacheSSLContext(SSLContext):
 
+    external_ports = [CEILOMETER_PORT]
     service_namespace = "ceilometer"
-
-    external_ports = [CEILOMETER_PORT+100]
