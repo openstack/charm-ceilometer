@@ -34,6 +34,7 @@ TO_PATCH = [
     'service_restart',
     'update_nrpe_config',
     'peer_store',
+    'configure_https',
 ]
 
 
