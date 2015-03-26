@@ -125,7 +125,10 @@ def configure_https():
 
     # TODO: improve this by checking if local CN certs are available
     # first then checking reload status (see LP #1433114).
-    subprocess.call(['service', 'apache2', 'reload'])
+    try:
+        subprocess.check_call(['service', 'apache2', 'reload'])
+    except subprocess.CalledProcessError:
+        subprocess.call(['service', 'apache2', 'restart'])
 
 
 @hooks.hook('config-changed')
