@@ -55,6 +55,7 @@ from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
     is_elected_leader
 )
+from charmhelpers.payload.execd import execd_preinstall
 
 hooks = Hooks()
 CONFIGS = register_configs()
@@ -62,6 +63,7 @@ CONFIGS = register_configs()
 
 @hooks.hook()
 def install():
+    execd_preinstall()
     origin = config('openstack-origin')
     if (lsb_release()['DISTRIB_CODENAME'] == 'precise'
             and origin == 'distro'):
