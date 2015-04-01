@@ -1,4 +1,5 @@
 from mock import patch, MagicMock, call
+import os
 
 import ceilometer_utils
 # Patch out register_configs for import of hooks
@@ -47,15 +48,19 @@ class CeilometerHooksTest(CharmTestCase):
             ceilometer_utils.CEILOMETER_PACKAGES
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}
 
+    @patch('charmhelpers.payload.execd.default_execd_dir',
+           return_value=os.path.join(os.getcwd(),'exec.d'))
     @patch('charmhelpers.core.hookenv.config')
-    def test_configure_source(self, mock_config):
+    def test_configure_source(self, mock_config, mock_execd_dir):
         self.test_config.set('openstack-origin', 'cloud:precise-havana')
         hooks.hooks.execute(['hooks/install'])
         self.configure_installation_source.\
             assert_called_with('cloud:precise-havana')
 
+    @patch('charmhelpers.payload.execd.default_execd_dir',
+           return_value=os.path.join(os.getcwd(),'exec.d'))
     @patch('charmhelpers.core.hookenv.config')
-    def test_install_hook_precise(self, mock_config):
+    def test_install_hook_precise(self, mock_config, mock_execd_dir):
         hooks.hooks.execute(['hooks/install'])
         self.configure_installation_source.\
             assert_called_with('cloud:precise-grizzly')
@@ -66,8 +71,10 @@ class CeilometerHooksTest(CharmTestCase):
             fatal=True
         )
 
+    @patch('charmhelpers.payload.execd.default_execd_dir',
+           return_value=os.path.join(os.getcwd(),'exec.d'))
     @patch('charmhelpers.core.hookenv.config')
-    def test_install_hook_distro(self, mock_config):
+    def test_install_hook_distro(self, mock_config, mock_execd_dir):
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'saucy'}
         hooks.hooks.execute(['hooks/install'])
         self.configure_installation_source.\
