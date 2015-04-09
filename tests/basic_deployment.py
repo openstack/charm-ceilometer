@@ -301,7 +301,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'rabbit_host': rabbitmq_relation['hostname'],
             },
             'api': {
-                'port': '8777',
+                'port': '8767',
             },
             'service_credentials': {
                 'os_auth_url': auth_uri + 'v2.0',
