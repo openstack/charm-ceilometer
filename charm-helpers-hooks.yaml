@@ -10,3 +10,4 @@ include:
     - contrib.python.packages
     - contrib.charmsupport
     - contrib.peerstorage
+    - payload.execd

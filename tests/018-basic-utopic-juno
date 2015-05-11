@@ -1,0 +1,9 @@
+#!/usr/bin/python
+
+"""Amulet tests on a basic ceilometer deployment on utopic-juno."""
+
+from basic_deployment import CeilometerBasicDeployment
+
+if __name__ == '__main__':
+    deployment = CeilometerBasicDeployment(series='utopic')
+    deployment.run_tests()
