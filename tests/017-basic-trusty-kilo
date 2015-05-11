@@ -1,0 +1,11 @@
+#!/usr/bin/python
+
+"""Amulet tests on a basic ceilometer deployment on trusty-kilo."""
+
+from basic_deployment import CeilometerBasicDeployment
+
+if __name__ == '__main__':
+    deployment = CeilometerBasicDeployment(series='trusty',
+                                           openstack='cloud:trusty-kilo',
+                                           source='cloud:trusty-updates/kilo')
+    deployment.run_tests()
