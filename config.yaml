@@ -100,6 +100,18 @@ options:
       192.168.0.0/24)
       .
       This network will be used for public endpoints.
+  endpoint-public-name:
+    type: string
+    default:
+    description: |
+      The hostname or address of the public endpoints created for ceilometer
+      in the keystone identity provider.
+      .
+      This value will be used for public endpoints. For example, an
+      endpoint-public-name set to 'ceilometer.example.com' with ssl enabled will
+      create the following public endpoints for ceilometer.
+      .
+      https://ceilometer.example.com:8777/
   # HA configuration settings
   vip:
     type: string

@@ -31,7 +31,6 @@ TO_PATCH = [
     'get_ceilometer_context',
     'lsb_release',
     'get_packages',
-    'canonical_url',
     'service_restart',
     'update_nrpe_config',
     'configure_https',
@@ -136,15 +135,38 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
 
+    @patch.object(hooks, 'canonical_url')
     @patch('charmhelpers.core.hookenv.config')
-    def test_keystone_joined(self, mock_config):
-        self.canonical_url.return_value = "http://thishost"
+    def test_keystone_joined(self, mock_config, _canonical_url):
+        _canonical_url.return_value = "http://thishost"
         self.test_config.set('region', 'myregion')
         hooks.hooks.execute(['hooks/identity-service-relation-joined'])
         url = "http://{}:{}".format('thishost', hooks.CEILOMETER_PORT)
         self.relation_set.assert_called_with(
             service=hooks.CEILOMETER_SERVICE,
             public_url=url, admin_url=url, internal_url=url,
+            requested_roles=hooks.CEILOMETER_ROLE,
+            region='myregion', relation_id=None)
+
+    @patch('charmhelpers.contrib.openstack.ip.is_ipv6')
+    @patch('charmhelpers.contrib.openstack.ip.resolve_address')
+    @patch('charmhelpers.core.hookenv.config')
+    @patch('charmhelpers.contrib.openstack.ip.config')
+    def test_keystone_joined_url_override(self, _config, mock_config,
+                                          _resolve_address, _is_ipv6):
+        _is_ipv6.return_value = False
+        _resolve_address.return_value = "thishost"
+        _config.side_effect = self.test_config.get
+        mock_config.side_effect = self.test_config.get
+        self.test_config.set('region', 'myregion')
+        self.test_config.set('endpoint-public-name', 'ceilometer.example.com')
+        hooks.keystone_joined(None)
+        url = "http://{}:{}".format('thishost', hooks.CEILOMETER_PORT)
+        public_url = "http://{}:{}".format('ceilometer.example.com',
+                                    hooks.CEILOMETER_PORT)
+        self.relation_set.assert_called_with(
+            service=hooks.CEILOMETER_SERVICE,
+            public_url=public_url, admin_url=url, internal_url=url,
             requested_roles=hooks.CEILOMETER_ROLE,
             region='myregion', relation_id=None)
 
