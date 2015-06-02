@@ -148,14 +148,14 @@ class CeilometerHooksTest(CharmTestCase):
             requested_roles=hooks.CEILOMETER_ROLE,
             region='myregion', relation_id=None)
 
-    @patch('charmhelpers.contrib.openstack.ip.is_ipv6')
-    @patch('charmhelpers.contrib.openstack.ip.resolve_address')
+    @patch('charmhelpers.contrib.openstack.ip.unit_get')
+    @patch('charmhelpers.contrib.openstack.ip.is_clustered')
     @patch('charmhelpers.core.hookenv.config')
     @patch('charmhelpers.contrib.openstack.ip.config')
     def test_keystone_joined_url_override(self, _config, mock_config,
-                                          _resolve_address, _is_ipv6):
-        _is_ipv6.return_value = False
-        _resolve_address.return_value = "thishost"
+                                          _is_clustered, _unit_get):
+        _unit_get.return_value = "thishost"
+        _is_clustered.return_value = False
         _config.side_effect = self.test_config.get
         mock_config.side_effect = self.test_config.get
         self.test_config.set('region', 'myregion')
