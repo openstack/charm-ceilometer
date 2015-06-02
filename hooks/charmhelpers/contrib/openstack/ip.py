@@ -77,7 +77,7 @@ def _get_scheme(configs):
               configured within the configs context.
     """
     scheme = 'http'
-    if 'https' in configs.complete_contexts():
+    if configs and 'https' in configs.complete_contexts():
         scheme = 'https'
     return scheme
 
@@ -94,14 +94,14 @@ def resolve_address(endpoint_type=PUBLIC):
     :param endpoint_type: Network endpoing type
     """
     resolved_address = None
-    
+
     # Allow the user to override the address which is used. This is
     # useful for proxy services or exposing a public endpoint url, etc.
     override_key = ADDRESS_MAP[endpoint_type]['override']
     addr_override = config(override_key)
     if addr_override:
         return addr_override
-    
+
     vips = config('vip')
     if vips:
         vips = vips.split()
