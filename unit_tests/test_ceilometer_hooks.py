@@ -159,11 +159,11 @@ class CeilometerHooksTest(CharmTestCase):
         _config.side_effect = self.test_config.get
         mock_config.side_effect = self.test_config.get
         self.test_config.set('region', 'myregion')
-        self.test_config.set('endpoint-public-name', 'ceilometer.example.com')
+        self.test_config.set('os-public-hostname', 'ceilometer.example.com')
         hooks.keystone_joined(None)
         url = "http://{}:{}".format('thishost', hooks.CEILOMETER_PORT)
         public_url = "http://{}:{}".format('ceilometer.example.com',
-                                    hooks.CEILOMETER_PORT)
+                                           hooks.CEILOMETER_PORT)
         self.relation_set.assert_called_with(
             service=hooks.CEILOMETER_SERVICE,
             public_url=public_url, admin_url=url, internal_url=url,
