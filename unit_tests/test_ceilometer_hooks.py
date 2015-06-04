@@ -148,6 +148,8 @@ class CeilometerHooksTest(CharmTestCase):
             requested_roles=hooks.CEILOMETER_ROLE,
             region='myregion', relation_id=None)
 
+    @patch('charmhelpers.contrib.openstack.ip.service_name',
+           lambda *args: 'ceilometer')
     @patch('charmhelpers.contrib.openstack.ip.unit_get')
     @patch('charmhelpers.contrib.openstack.ip.is_clustered')
     @patch('charmhelpers.core.hookenv.config')
