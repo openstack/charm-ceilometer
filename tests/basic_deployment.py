@@ -236,9 +236,11 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'hostname': u.valid_ip,
             'port': '27017',
             'private-address': u.valid_ip,
-            'replset': 'myset',
             'type': 'database',
         }
+
+        if self._get_openstack_release() == self.precise_icehouse:
+            expected['replset'] = 'myset'
 
         ret = u.validate_relation_data(unit, relation, expected)
         if ret:
