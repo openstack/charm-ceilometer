@@ -68,36 +68,38 @@ def leader_get(attribute=None):
     If a setting is not extant in the leader-get but is on the relation-get
     peer rel, it is migrated and marked as such so that it is not re-migrated.
     """
-    settings = _leader_get(attribute=attribute)
+    migration_key = '__leader_get_migrated_settings__'
     if not is_leader():
-        return settings
+        return _leader_get(attribute=attribute)
 
     settings_migrated = False
-    migration_key = '__leader_get_migrated_settings__'
-    if attribute:
-        migrated = _leader_get(attribute=migration_key)
-        if migrated:
-            migrated = set(json.loads(migrated))
-        else:
-            migrated = set([])
-    elif migration_key in settings:
-        migrated = set(json.loads(settings[migration_key]))
-        # Remove from returned settings
-        del settings[migration_key]
+    leader_settings = _leader_get(attribute=attribute)
+    previously_migrated = _leader_get(attribute=migration_key)
+
+    if previously_migrated:
+        migrated = set(json.loads(previously_migrated))
     else:
         migrated = set([])
 
+    try:
+        if migration_key in leader_settings:
+            del leader_settings[migration_key]
+    except TypeError:
+        pass
+
     if attribute:
         if attribute in migrated:
-            return settings
+            return leader_settings
 
-        # Leader setting wins
-        if not settings:
-            settings = relation_get(attribute=attribute, unit=local_unit())
-            if settings:
-                leader_set(settings={attribute: settings})
+        # If attribute not present in leader db, check if this unit has set
+        # the attribute in the peer relation
+        if not leader_settings:
+            peer_setting = relation_get(attribute=attribute, unit=local_unit())
+            if peer_setting:
+                leader_set(settings={attribute: peer_setting})
+                leader_settings = peer_setting
 
-        if settings:
+        if leader_settings:
             settings_migrated = True
             migrated.add(attribute)
     else:
@@ -105,20 +107,20 @@ def leader_get(attribute=None):
         if r_settings:
             for key in set(r_settings.keys()).difference(migrated):
                 # Leader setting wins
-                if not settings.get(key):
-                    settings[key] = r_settings[key]
+                if not leader_settings.get(key):
+                    leader_settings[key] = r_settings[key]
 
                 settings_migrated = True
                 migrated.add(key)
 
             if settings_migrated:
-                leader_set(**settings)
+                leader_set(**leader_settings)
 
     if migrated and settings_migrated:
         migrated = json.dumps(list(migrated))
         leader_set(settings={migration_key: migrated})
 
-    return settings
+    return leader_settings
 
 
 def relation_set(relation_id=None, relation_settings=None, **kwargs):
