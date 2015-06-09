@@ -34,6 +34,7 @@ TO_PATCH = [
     'canonical_url',
     'service_restart',
     'update_nrpe_config',
+    'peer_store',
     'configure_https',
 ]
 
@@ -192,8 +193,8 @@ class CeilometerHooksTest(CharmTestCase):
         shared_secret.return_value = 'secret'
 
         hooks.hooks.execute(['hooks/cluster-relation-joined'])
-        self.assertTrue(self.relation_set.called)
-        self.relation_set.assert_called_with(shared_secret='secret')
+        self.assertTrue(self.peer_store.called)
+        self.peer_store.assert_called_with('shared_secret', 'secret')
         self.assertTrue(self.CONFIGS.write_all.called)
 
     @patch('charmhelpers.core.hookenv.config')

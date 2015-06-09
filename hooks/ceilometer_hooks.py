@@ -55,6 +55,7 @@ from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
     is_elected_leader
 )
+from charmhelpers.contrib.peerstorage import peer_store
 from charmhelpers.payload.execd import execd_preinstall
 
 hooks = Hooks()
@@ -170,7 +171,7 @@ def cluster_joined():
 
     # If this node is the elected leader then share our secret with other nodes
     if is_elected_leader('grp_ceilometer_vips'):
-        relation_set(shared_secret=get_shared_secret())
+        peer_store('shared_secret', get_shared_secret())
 
     CONFIGS.write_all()
 
