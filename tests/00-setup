@@ -5,6 +5,6 @@ set -ex
 sudo add-apt-repository --yes ppa:juju/stable
 sudo apt-get update --yes
 sudo apt-get install --yes python-amulet \
-                           python-distroinfo \
+                           python-distro-info \
                            python-keystoneclient \
                            python-ceilometerclient
