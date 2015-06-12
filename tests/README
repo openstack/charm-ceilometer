@@ -1,11 +1,41 @@
 This directory provides Amulet tests that focus on verification of
 ceilometer deployments.
 
+test_* methods are called in lexical sort order.
+
+Test name convention to ensure desired test order:
+    1xx service and endpoint checks
+    2xx relation checks
+    3xx config checks
+    4xx functional checks
+    9xx restarts and other final checks
+
 In order to run tests, you'll need charm-tools installed (in addition to
 juju, of course):
     sudo add-apt-repository ppa:juju/stable
     sudo apt-get update
     sudo apt-get install charm-tools
+
+Common uses of ceilometer relations in bundles:
+    - - ceilometer
+      - keystone:identity-service
+    - [ ceilometer, rabbitmq-server ]
+    - [ ceilometer, mongodb ]
+    - [ ceilometer-agent, nova-compute ]
+    - [ ceilometer-agent, ceilometer ]
+
+More detailed relations of ceilometer in a common deployment:
+    relations:
+      amqp:
+      - rabbitmq-server
+      ceilometer-service:
+      - ceilometer-agent
+      cluster:
+      - ceilometer
+      identity-service:
+      - keystone
+      shared-db:
+      - mongodb
 
 If you use a web proxy server to access the web, you'll need to set the
 AMULET_HTTP_PROXY environment variable to the http URL of the proxy server.
