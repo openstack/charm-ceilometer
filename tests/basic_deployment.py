@@ -17,8 +17,6 @@ from charmhelpers.contrib.openstack.amulet.utils import (
 # Use DEBUG to turn on debug logging
 u = OpenStackAmuletUtils(DEBUG)
 
-# XXX Tests for ceilometer-service relation missing due to Bug#1421388
-
 
 class CeilometerBasicDeployment(OpenStackAmuletDeployment):
     """Amulet tests on a basic ceilometer deployment."""
@@ -42,8 +40,10 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
            """
         this_service = {'name': 'ceilometer'}
         other_services = [{'name': 'mysql'},
-                          {'name': 'rabbitmq-server'}, {'name': 'keystone'},
-                          {'name': 'mongodb'}, {'name': 'ceilometer-agent'},
+                          {'name': 'rabbitmq-server'},
+                          {'name': 'keystone'},
+                          {'name': 'mongodb'},
+                          {'name': 'ceilometer-agent'},
                           {'name': 'nova-compute'}]
         super(CeilometerBasicDeployment, self)._add_services(this_service,
                                                              other_services)
@@ -60,6 +60,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'ceilometer:ceilometer-service': 'ceilometer-agent:'
                                              'ceilometer-service',
             'nova-compute:nova-ceilometer': 'ceilometer-agent:nova-ceilometer',
+            'nova-compute:shared-db': 'mysql:shared-db',
+            'nova-compute:amqp': 'rabbitmq-server:amqp'
         }
         super(CeilometerBasicDeployment, self)._add_relations(relations)
 
@@ -90,13 +92,13 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         # Let things settle a bit before moving forward
         time.sleep(30)
 
-        # Authenticate admin with keystone
+        # Authenticate admin with keystone endpoint
         self.keystone = u.authenticate_keystone_admin(self.keystone_sentry,
                                                       user='admin',
                                                       password='openstack',
                                                       tenant='admin')
 
-        # Authenticate admin with neutron
+        # Authenticate admin with ceilometer endpoint
         ep = self.keystone.service_catalog.url_for(service_type='metering',
                                                    endpoint_type='publicURL')
         self.ceil = ceilclient.Client(endpoint=ep, token=self._get_token)
@@ -123,6 +125,62 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         ret = u.validate_services_by_name(service_names)
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
+
+    def test_110_service_catalog(self):
+        """Verify that the service catalog endpoint data is valid."""
+        endpoint_check = {
+            'adminURL': u.valid_url,
+            'id': u.not_null,
+            'region': 'RegionOne',
+            'publicURL': u.valid_url,
+            'internalURL': u.valid_url
+        }
+        expected = {
+            'metering': [endpoint_check],
+            'identity': [endpoint_check]
+        }
+        actual = self.keystone.service_catalog.get_endpoints()
+
+        ret = u.validate_svc_catalog_endpoint_data(expected, actual)
+        if ret:
+            amulet.raise_status(amulet.FAIL, msg=ret)
+
+    def test_112_keystone_api_endpoint(self):
+        """Verify the ceilometer api endpoint data."""
+        endpoints = self.keystone.endpoints.list()
+        u.log.debug(endpoints)
+        internal_port = public_port = '5000'
+        admin_port = '35357'
+        expected = {'id': u.not_null,
+                    'region': 'RegionOne',
+                    'adminurl': u.valid_url,
+                    'internalurl': u.valid_url,
+                    'publicurl': u.valid_url,
+                    'service_id': u.not_null}
+
+        ret = u.validate_endpoint_data(endpoints, admin_port, internal_port,
+                                       public_port, expected)
+        if ret:
+            message = 'Keystone endpoint: {}'.format(ret)
+            amulet.raise_status(amulet.FAIL, msg=message)
+
+    def test_114_ceilometer_api_endpoint(self):
+        """Verify the ceilometer api endpoint data."""
+        endpoints = self.keystone.endpoints.list()
+        u.log.debug(endpoints)
+        admin_port = internal_port = public_port = '8777'
+        expected = {'id': u.not_null,
+                    'region': 'RegionOne',
+                    'adminurl': u.valid_url,
+                    'internalurl': u.valid_url,
+                    'publicurl': u.valid_url,
+                    'service_id': u.not_null}
+
+        ret = u.validate_endpoint_data(endpoints, admin_port, internal_port,
+                                       public_port, expected)
+        if ret:
+            message = 'Ceilometer endpoint: {}'.format(ret)
+            amulet.raise_status(amulet.FAIL, msg=message)
 
     def test_200_ceilometer_identity_relation(self):
         """Verify the ceilometer to keystone identity-service relation data"""
@@ -256,12 +314,86 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             message = u.relation_error('mongodb database', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
 
+    def test_207_ceilometer_ceilometer_agent_relation(self):
+        """Verify the ceilometer to ceilometer-agent relation data"""
+        u.log.debug('Checking ceilometer:ceilometer-agent relation data...')
+        unit = self.ceil_sentry
+        relation = ['ceilometer-service',
+                    'ceilometer-agent:ceilometer-service']
+        expected = {
+            'rabbitmq_user': 'ceilometer',
+            'verbose': 'False',
+            'rabbitmq_host': u.valid_ip,
+            'service_ports': "{'ceilometer_api': [8777, 8767]}",
+            'use_syslog': 'False',
+            'metering_secret': u.not_null,
+            'rabbitmq_virtual_host': 'openstack',
+            'db_port': '27017',
+            'private-address': u.valid_ip,
+            'db_name': 'ceilometer',
+            'db_host': u.valid_ip,
+            'debug': 'False',
+            'rabbitmq_password': u.not_null,
+            'port': '8767'
+        }
+
+        ret = u.validate_relation_data(unit, relation, expected)
+        if ret:
+            message = u.relation_error('ceilometer-service', ret)
+            amulet.raise_status(amulet.FAIL, msg=message)
+
+    def test_208_ceilometer_agent_ceilometer_relation(self):
+        """Verify the ceilometer-agent to ceilometer relation data"""
+        u.log.debug('Checking ceilometer-agent:ceilometer relation data...')
+        unit = self.ceil_agent_sentry
+        relation = ['ceilometer-service', 'ceilometer:ceilometer-service']
+        expected = {'private-address': u.valid_ip}
+
+        ret = u.validate_relation_data(unit, relation, expected)
+        if ret:
+            message = u.relation_error('ceilometer-service', ret)
+            amulet.raise_status(amulet.FAIL, msg=message)
+
+    def test_209_nova_compute_ceilometer_agent_relation(self):
+        """Verify the nova-compute to ceilometer relation data"""
+        u.log.debug('Checking nova-compute:ceilometer relation data...')
+        unit = self.nova_sentry
+        relation = ['nova-ceilometer', 'ceilometer-agent:nova-ceilometer']
+        expected = {'private-address': u.valid_ip}
+
+        ret = u.validate_relation_data(unit, relation, expected)
+        if ret:
+            message = u.relation_error('ceilometer-service', ret)
+            amulet.raise_status(amulet.FAIL, msg=message)
+
+    def test_210_ceilometer_agent_nova_compute_relation(self):
+        """Verify the ceilometer to nova-compute relation data"""
+        u.log.debug('Checking ceilometer:nova-compute relation data...')
+        unit = self.ceil_agent_sentry
+        relation = ['nova-ceilometer', 'nova-compute:nova-ceilometer']
+        sub = ('{"nova": {"/etc/nova/nova.conf": {"sections": {"DEFAULT": '
+               '[["instance_usage_audit", "True"], '
+               '["instance_usage_audit_period", "hour"], '
+               '["notify_on_state_change", "vm_and_task_state"], '
+               '["notification_driver", "ceilometer.compute.nova_notifier"], '
+               '["notification_driver", '
+               '"nova.openstack.common.notifier.rpc_notifier"]]}}}}')
+        expected = {
+            'subordinate_configuration': sub,
+            'private-address': '10.5.15.57'
+        }
+
+        ret = u.validate_relation_data(unit, relation, expected)
+        if ret:
+            message = u.relation_error('ceilometer-service', ret)
+            amulet.raise_status(amulet.FAIL, msg=message)
+
     def test_300_ceilometer_config(self):
         """Verify the data in the ceilometer config file."""
         u.log.debug('Checking ceilometer config file data...')
         unit = self.ceil_sentry
-        rabbitmq_relation = self.rabbitmq_sentry.relation('amqp',
-                                                          'ceilometer:amqp')
+        rmq_rel = self.rabbitmq_sentry.relation('amqp',
+                                                'ceilometer:amqp')
         ks_rel = self.keystone_sentry.relation('identity-service',
                                                'ceilometer:identity-service')
         auth_uri = '%s://%s:%s/' % (ks_rel['service_protocol'],
@@ -279,8 +411,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'use_syslog': 'False',
                 'rabbit_userid': 'ceilometer',
                 'rabbit_virtual_host': 'openstack',
-                'rabbit_password': rabbitmq_relation['password'],
-                'rabbit_host': rabbitmq_relation['hostname'],
+                'rabbit_password': rmq_rel['password'],
+                'rabbit_host': rmq_rel['hostname'],
             },
             'api': {
                 'port': '8767',
@@ -311,11 +443,75 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 message = "ceilometer config error: {}".format(ret)
                 amulet.raise_status(amulet.FAIL, msg=message)
 
+    def test_301_nova_config(self):
+        """Verify data in the nova compute nova config file"""
+        unit = self.nova_sentry
+        conf = '/etc/nova/nova.conf'
+        mysql_rel = self.mysql_sentry.relation('shared-db',
+                                               'nova-compute:shared-db')
+        db_uri = "mysql://{}:{}@{}/{}".format('nova',
+                                              mysql_rel['nova_password'],
+                                              mysql_rel['db_host'],
+                                              'nova')
+        expected = {
+            'DEFAULT': {
+                'verbose': 'False',
+                'debug': 'False',
+                'use_syslog': 'False',
+                'my_ip': u.valid_ip,
+                'dhcpbridge_flagfile': '/etc/nova/nova.conf',
+                'dhcpbridge': '/usr/bin/nova-dhcpbridge',
+                'logdir': '/var/log/nova',
+                'state_path': '/var/lib/nova',
+                'lock_path': '/var/lock/nova',
+                'api_paste_config': '/etc/nova/api-paste.ini',
+                'enabled_apis': 'ec2,osapi_compute,metadata',
+                'auth_strategy': 'keystone',
+                'compute_driver': 'libvirt.LibvirtDriver',
+                'sql_connection': db_uri,
+                'instance_usage_audit': 'True',
+                'instance_usage_audit_period': 'hour',
+                'notify_on_state_change': 'vm_and_task_state',
+                'notification_driver': 'ceilometer.compute.nova_notifier',
+                'notification_driver': 'nova.openstack.common'
+                                       '.notifier.rpc_notifier'
+            }
+        }
+
+        for section, pairs in expected.iteritems():
+            ret = u.validate_config_data(unit, conf, section, pairs)
+            if ret:
+                message = "ceilometer config error: {}".format(ret)
+                amulet.raise_status(amulet.FAIL, msg=message)
+
+    def test_302_nova_ceilometer_config(self):
+        """Verify data in the ceilometer config file on the
+        nova-compute (ceilometer-agent) unit."""
+        unit = self.nova_sentry
+        conf = '/etc/ceilometer/ceilometer.conf'
+        expected = {
+            'DEFAULT': {
+                'logdir': '/var/log/ceilometer'
+            },
+            'database': {
+                'backend': 'sqlalchemy',
+                'connection': 'sqlite:////var/lib/ceilometer/$sqlite_db'
+            }
+        }
+
+        for section, pairs in expected.iteritems():
+            ret = u.validate_config_data(unit, conf, section, pairs)
+            if ret:
+                message = "ceilometer config error: {}".format(ret)
+                amulet.raise_status(amulet.FAIL, msg=message)
+
     def test_400_api_connection(self):
         """Simple api calls to check service is up and responding"""
         u.log.debug('Checking api functionality...')
         assert(self.ceil.samples.list() == [])
         assert(self.ceil.meters.list() == [])
+
+    # NOTE(beisner): need to add more functional tests
 
     def test_900_restart_on_config_change(self):
         """Verify that the specified services are restarted when the config
