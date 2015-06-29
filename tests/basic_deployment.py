@@ -79,6 +79,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         """Perform final initialization before tests get run."""
         # Access the sentries for inspecting service units
         self.ceil_sentry = self.d.sentry.unit['ceilometer/0']
+        self.ceil_agent_sentry = self.d.sentry.unit['ceilometer-agent/0']
         self.mysql_sentry = self.d.sentry.unit['mysql/0']
         self.keystone_sentry = self.d.sentry.unit['keystone/0']
         self.rabbitmq_sentry = self.d.sentry.unit['rabbitmq-server/0']
@@ -128,6 +129,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_110_service_catalog(self):
         """Verify that the service catalog endpoint data is valid."""
+        u.log.debug('Checking keystone service catalog data...')
         endpoint_check = {
             'adminURL': u.valid_url,
             'id': u.not_null,
@@ -147,6 +149,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_112_keystone_api_endpoint(self):
         """Verify the ceilometer api endpoint data."""
+        u.log.debug('Checking keystone api endpoint data...')
         endpoints = self.keystone.endpoints.list()
         u.log.debug(endpoints)
         internal_port = public_port = '5000'
@@ -166,6 +169,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_114_ceilometer_api_endpoint(self):
         """Verify the ceilometer api endpoint data."""
+        u.log.debug('Checking ceilometer api endpoint data...')
         endpoints = self.keystone.endpoints.list()
         u.log.debug(endpoints)
         admin_port = internal_port = public_port = '8777'
@@ -184,7 +188,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_200_ceilometer_identity_relation(self):
         """Verify the ceilometer to keystone identity-service relation data"""
-        u.log.debug('Checking service catalog endpoint data...')
+        u.log.debug('Checking ceilometer to keystone identity-service '
+                    'relation data...')
         unit = self.ceil_sentry
         relation = ['identity-service', 'keystone:identity-service']
         ceil_ip = unit.relation('identity-service',
@@ -445,6 +450,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_301_nova_config(self):
         """Verify data in the nova compute nova config file"""
+        u.log.debug('Checking nova compute config file...')
         unit = self.nova_sentry
         conf = '/etc/nova/nova.conf'
         mysql_rel = self.mysql_sentry.relation('shared-db',
@@ -487,6 +493,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
     def test_302_nova_ceilometer_config(self):
         """Verify data in the ceilometer config file on the
         nova-compute (ceilometer-agent) unit."""
+        u.log.debug('Checking nova ceilometer config file...')
         unit = self.nova_sentry
         conf = '/etc/ceilometer/ceilometer.conf'
         expected = {
