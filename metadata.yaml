@@ -9,8 +9,9 @@ description: |
  effect, Ceilometer should be able to share collected data with a variety
  of consumers.
 tags:
-  - miscellaneous
   - openstack
+  - telemetry
+  - misc
 provides:
   nrpe-external-master:
     interface: nrpe-external-master

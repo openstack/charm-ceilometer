@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+"""
+Basic ceilometer functional tests.
+"""
 import amulet
 import time
 from ceilometerclient.v2 import client as ceilclient
@@ -84,7 +87,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         self.keystone_sentry = self.d.sentry.unit['keystone/0']
         self.rabbitmq_sentry = self.d.sentry.unit['rabbitmq-server/0']
         self.mongodb_sentry = self.d.sentry.unit['mongodb/0']
-        self.compute_sentry = self.d.sentry.unit['nova-compute/0']
+        self.nova_sentry = self.d.sentry.unit['nova-compute/0']
         u.log.debug('openstack release val: {}'.format(
             self._get_openstack_release()))
         u.log.debug('openstack release str: {}'.format(
@@ -385,7 +388,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                '"nova.openstack.common.notifier.rpc_notifier"]]}}}}')
         expected = {
             'subordinate_configuration': sub,
-            'private-address': '10.5.15.57'
+            'private-address': u.valid_ip
         }
 
         ret = u.validate_relation_data(unit, relation, expected)
@@ -453,12 +456,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         u.log.debug('Checking nova compute config file...')
         unit = self.nova_sentry
         conf = '/etc/nova/nova.conf'
-        mysql_rel = self.mysql_sentry.relation('shared-db',
-                                               'nova-compute:shared-db')
-        db_uri = "mysql://{}:{}@{}/{}".format('nova',
-                                              mysql_rel['nova_password'],
-                                              mysql_rel['db_host'],
-                                              'nova')
         expected = {
             'DEFAULT': {
                 'verbose': 'False',
@@ -469,26 +466,39 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'dhcpbridge': '/usr/bin/nova-dhcpbridge',
                 'logdir': '/var/log/nova',
                 'state_path': '/var/lib/nova',
-                'lock_path': '/var/lock/nova',
                 'api_paste_config': '/etc/nova/api-paste.ini',
                 'enabled_apis': 'ec2,osapi_compute,metadata',
                 'auth_strategy': 'keystone',
                 'compute_driver': 'libvirt.LibvirtDriver',
-                'sql_connection': db_uri,
                 'instance_usage_audit': 'True',
                 'instance_usage_audit_period': 'hour',
                 'notify_on_state_change': 'vm_and_task_state',
-                'notification_driver': 'ceilometer.compute.nova_notifier',
-                'notification_driver': 'nova.openstack.common'
-                                       '.notifier.rpc_notifier'
             }
         }
 
+        # NOTE(beisner): notification_driver is not checked like the
+        # others, as configparser does not support duplicate config
+        # options, and dicts cant have duplicate keys.
         for section, pairs in expected.iteritems():
             ret = u.validate_config_data(unit, conf, section, pairs)
             if ret:
                 message = "ceilometer config error: {}".format(ret)
                 amulet.raise_status(amulet.FAIL, msg=message)
+
+        # Check notification_driver existence via simple grep cmd
+        lines = [('notification_driver = '
+                  'ceilometer.compute.nova_notifier'),
+                 ('notification_driver = '
+                  'nova.openstack.common.notifier.rpc_notifier')]
+
+        sentry_units = [unit]
+        cmds = []
+        for line in lines:
+            cmds.append('grep "{}" {}'.format(line, conf))
+
+        ret = u.check_commands_on_units(cmds, sentry_units)
+        if ret:
+            amulet.raise_status(amulet.FAIL, msg=ret)
 
     def test_302_nova_ceilometer_config(self):
         """Verify data in the ceilometer config file on the
