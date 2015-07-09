@@ -133,3 +133,8 @@ options:
     description: |
       Default multicast port number that will be used to communicate between
       HA Cluster nodes.
+  api-workers:
+    type: int
+    default: 1
+    description: | 
+      Number of workers for Ceilometer API server. (>= Kilo).
