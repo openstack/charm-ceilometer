@@ -2,11 +2,16 @@ options:
   debug:
     default: False
     type: boolean
-    description: Enable debug logging
+    description: Enable debug logging.
   verbose:
     default: False
     type: boolean
-    description: Enable verbose logging
+    description: Enable verbose logging.
+  use-syslog:
+    type: boolean
+    default: False
+    description: |
+      Setting this to True will allow supporting services to log to syslog.
   openstack-origin:
     default: distro
     type: string
@@ -15,13 +20,27 @@ options:
       distro (default), ppa:somecustom/ppa, a deb url sources entry,
       or a supported Cloud Archive release pocket.
 
-      Supported Cloud Archive sources include: cloud:precise-folsom,
-      cloud:precise-folsom/updates, cloud:precise-folsom/staging,
-      cloud:precise-folsom/proposed.
+      Supported Cloud Archive sources include:
 
-      Note that updating this setting to a source that is known to
-      provide a later version of OpenStack will trigger a software
-      upgrade.
+      cloud:<series>-<openstack-release>
+      cloud:<series>-<openstack-release>/updates
+      cloud:<series>-<openstack-release>/staging
+      cloud:<series>-<openstack-release>/proposed
+
+      For series=Precise we support cloud archives for openstack-release:
+         * icehouse
+
+      For series=Trusty we support cloud archives for openstack-release:
+         * juno
+         * kilo
+         * ...
+
+      NOTE: updating this setting to a source that is known to provide
+      a later version of OpenStack will trigger a software upgrade.
+
+      NOTE: when openstack-origin-git is specified, openstack specific
+      packages will be installed from source rather than from the
+      openstack-origin repository.
   region:
     default: RegionOne
     type: string
@@ -34,12 +53,6 @@ options:
     default: openstack
     type: string
     description: RabbitMQ virtual host to request access on rabbitmq-server.
-  use-syslog:
-    type: boolean
-    default: False
-    description: |
-      By default, all services will log into their corresponding log files.
-      Setting this to True will force all services to log to the syslog.
   ssl_cert:
     type: string
     default:
@@ -80,25 +93,25 @@ options:
     type: string
     default:
     description: |
-      The IP address and netmask of the OpenStack Admin network (e.g.,
+      The IP address and netmask of the OpenStack Admin network (e.g.
       192.168.0.0/24)
-      .
+
       This network will be used for admin endpoints.
   os-internal-network:
     type: string
     default:
     description: |
-      The IP address and netmask of the OpenStack Internal network (e.g.,
+      The IP address and netmask of the OpenStack Internal network (e.g.
       192.168.0.0/24)
-      .
+
       This network will be used for internal endpoints.
   os-public-network:
     type: string
     default:
     description: |
-      The IP address and netmask of the OpenStack Public network (e.g.,
+      The IP address and netmask of the OpenStack Public network (e.g.
       192.168.0.0/24)
-      .
+
       This network will be used for public endpoints.
   os-public-hostname:
     type: string
@@ -106,11 +119,11 @@ options:
     description: |
       The hostname or address of the public endpoints created for ceilometer
       in the keystone identity provider.
-      .
+
       This value will be used for public endpoints. For example, an
       os-public-hostname set to 'ceilometer.example.com' with ssl enabled will
       create the following public endpoints for ceilometer:
-      .
+
       https://ceilometer.example.com:8777/
   # HA configuration settings
   vip:
@@ -118,7 +131,7 @@ options:
     default:
     description: |
       Virtual IP(s) to use to front API services in HA configuration.
-      .
+
       If multiple networks are being used, a VIP should be provided for each
       network, separated by spaces.
   ha-bindiface:
