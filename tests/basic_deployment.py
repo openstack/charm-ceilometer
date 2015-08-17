@@ -107,6 +107,33 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                                                    endpoint_type='publicURL')
         self.ceil = ceilclient.Client(endpoint=ep, token=self._get_token)
 
+    def _run_action(self, unit_id, action, *args):
+        command = ["juju", "action", "do", "--format=json", unit_id, action]
+        command.extend(args)
+        print("Running command: %s\n" % " ".join(command))
+        output = subprocess.check_output(command)
+        output_json = output.decode(encoding="UTF-8")
+        data = json.loads(output_json)
+        action_id = data[u'Action queued with id']
+        return action_id
+
+    def _wait_on_action(self, action_id):
+        command = ["juju", "action", "fetch", "--format=json", action_id]
+        while True:
+            try:
+                output = subprocess.check_output(command)
+            except Exception as e:
+                print(e)
+                return False
+            output_json = output.decode(encoding="UTF-8")
+            data = json.loads(output_json)
+            if data[u"status"] == "completed":
+                return True
+            elif data[u"status"] == "failed":
+                return False
+            time.sleep(2)
+
+        
     def test_100_services(self):
         """Verify the expected services are running on the corresponding
            service units."""
@@ -569,3 +596,22 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             sleep_time = 0
 
         self.d.configure(juju_service, set_default)
+
+    def test_1000_pause_and_resume(self):
+        """The services can be paused and resumed. """
+        sentry = self.ceil_sentry
+        juju_service = 'ceilometer'
+
+        services = [
+            'ceilometer-agent-central',
+            'ceilometer-collector',
+            'ceilometer-api',
+            'ceilometer-alarm-evaluator',
+            'ceilometer-alarm-notifier',
+            'ceilometer-agent-notification',
+        ]
+        unit_name = "ceilometer/0"
+        # unit = self.d.sentry.unit[unit_name]
+        
+        action_id = self._run_action(unit_name, "pause")
+        assert self._wait_on_action(action_id), "Pause action failed."
