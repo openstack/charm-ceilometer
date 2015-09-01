@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import subprocess
+
 """
 Basic ceilometer functional tests.
 """
