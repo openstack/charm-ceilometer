@@ -1,0 +1,4 @@
+pause:
+  Pause the apache service providing ceilometer functions.
+resume:
+  Resume the apache service providing ceilometer functions.
