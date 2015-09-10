@@ -619,5 +619,5 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         action_id = self._run_action(unit_name, "pause")
         assert self._wait_on_action(action_id), "Pause action failed."
 
-        action_id = self.run_action(unit_name, "resume")
+        action_id = self._run_action(unit_name, "resume")
         assert self._wait_on_action(action_id), "Resume action failed."
