@@ -113,8 +113,8 @@ def register_configs():
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
 
-    if (get_os_codename_install_source(config('openstack-origin'))
-            >= 'icehouse'):
+    if (get_os_codename_install_source(
+            config('openstack-origin')) >= 'icehouse'):
         CONFIG_FILES[CEILOMETER_CONF]['services'] = \
             CONFIG_FILES[CEILOMETER_CONF]['services'] + ICEHOUSE_SERVICES
 
@@ -194,8 +194,8 @@ def do_openstack_upgrade(configs):
 
 def get_packages():
     packages = deepcopy(CEILOMETER_PACKAGES)
-    if (get_os_codename_install_source(config('openstack-origin'))
-            >= 'icehouse'):
+    if (get_os_codename_install_source(
+            config('openstack-origin')) >= 'icehouse'):
         packages = packages + ICEHOUSE_PACKAGES
     return packages
 

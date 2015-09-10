@@ -136,7 +136,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 return False
             time.sleep(2)
 
-        
     def test_100_services(self):
         """Verify the expected services are running on the corresponding
            service units."""
@@ -602,20 +601,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_1000_pause_and_resume(self):
         """The services can be paused and resumed. """
-        sentry = self.ceil_sentry
-        juju_service = 'ceilometer'
-
-        services = [
-            'ceilometer-agent-central',
-            'ceilometer-collector',
-            'ceilometer-api',
-            'ceilometer-alarm-evaluator',
-            'ceilometer-alarm-notifier',
-            'ceilometer-agent-notification',
-        ]
         unit_name = "ceilometer/0"
-        # unit = self.d.sentry.unit[unit_name]
-        
         action_id = self._run_action(unit_name, "pause")
         assert self._wait_on_action(action_id), "Pause action failed."
 
