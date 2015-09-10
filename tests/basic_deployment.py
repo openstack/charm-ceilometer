@@ -6,6 +6,7 @@ import subprocess
 Basic ceilometer functional tests.
 """
 import amulet
+import json
 import time
 from ceilometerclient.v2 import client as ceilclient
 
