@@ -114,6 +114,7 @@ SWIFT_CODENAMES = OrderedDict([
     ('2.2.1', 'kilo'),
     ('2.2.2', 'kilo'),
     ('2.3.0', 'liberty'),
+    ('2.4.0', 'liberty'),
 ])
 
 # >= Liberty version->codename mapping
@@ -141,6 +142,9 @@ PACKAGE_CODENAMES = {
     ]),
     'glance-common': OrderedDict([
         ('11.0.0', 'liberty'),
+    ]),
+    'openstack-dashboard': OrderedDict([
+        ('8.0.0', 'liberty'),
     ]),
 }
 
@@ -227,7 +231,7 @@ def get_os_codename_package(package, fatal=True):
         error_out(e)
 
     vers = apt.upstream_version(pkg.current_ver.ver_str)
-    match = re.match('^(\d)\.(\d)\.(\d)', vers)
+    match = re.match('^(\d+)\.(\d+)\.(\d+)', vers)
     if match:
         vers = match.group(0)
 
@@ -248,6 +252,8 @@ def get_os_codename_package(package, fatal=True):
                 vers = vers[:6]
                 return OPENSTACK_CODENAMES[vers]
         except KeyError:
+            if not fatal:
+                return None
             e = 'Could not determine OpenStack codename for version %s' % vers
             error_out(e)
 
