@@ -602,8 +602,14 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
     def test_1000_pause_and_resume(self):
         """The services can be paused and resumed. """
         unit_name = "ceilometer/0"
+        unit = self.d.sentry.unit[unit_name]
+
+        assert u.status_get(unit)[0] == "unknown"
+        
         action_id = self._run_action(unit_name, "pause")
         assert self._wait_on_action(action_id), "Pause action failed."
+        assert u.status_get(unit)[0] == "maintenance"
 
         action_id = self._run_action(unit_name, "resume")
         assert self._wait_on_action(action_id), "Resume action failed."
+        assert u.status_get(unit)[0] == "active"
