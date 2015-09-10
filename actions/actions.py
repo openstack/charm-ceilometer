@@ -5,7 +5,16 @@ import sys
 
 from charmhelpers.core.host import service_pause, service_resume
 from charmhelpers.core.hookenv import action_fail, status_set
-from ceilometer_utils import CEILOMETER_SERVICES
+
+CEILOMETER_SERVICES = [
+    'ceilometer-agent-central',
+    'ceilometer-collector',
+    'ceilometer-api',
+    'ceilometer-alarm-evaluator',
+    'ceilometer-alarm-notifier',
+    'ceilometer-agent-notification',
+]
+
 
 def pause(args):
     """Pause the Ceilometer services.
