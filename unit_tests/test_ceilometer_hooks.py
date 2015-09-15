@@ -136,6 +136,14 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
 
+    def test_config_changed_with_openstack_upgrade_action(self):
+        self.openstack_upgrade_available.return_value = True
+        self.test_config.set('action-managed-upgrade', True)
+
+        hooks.hooks.execute(['hooks/config-changed'])
+
+        self.assertFalse(self.do_openstack_upgrade.called)
+
     @patch.object(hooks, 'canonical_url')
     @patch('charmhelpers.core.hookenv.config')
     def test_keystone_joined(self, mock_config, _canonical_url):
