@@ -5,7 +5,7 @@ import sys
 
 from charmhelpers.core.host import service_pause, service_resume
 from charmhelpers.core.hookenv import action_fail, status_set
-from hooks.ceilometer_utils import CEILOMETER_SERVICES
+from ceilometer_utils import CEILOMETER_SERVICES
 
 
 def pause(args):
