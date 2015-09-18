@@ -66,8 +66,7 @@ CONFIGS = register_configs()
 def install():
     execd_preinstall()
     origin = config('openstack-origin')
-    if (lsb_release()['DISTRIB_CODENAME'] == 'precise'
-            and origin == 'distro'):
+    if (lsb_release()['DISTRIB_CODENAME'] == 'precise' and origin == 'distro'):
         origin = 'cloud:precise-grizzly'
     configure_installation_source(origin)
     apt_update(fatal=True)

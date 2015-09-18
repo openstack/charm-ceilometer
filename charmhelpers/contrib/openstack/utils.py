@@ -114,6 +114,7 @@ SWIFT_CODENAMES = OrderedDict([
     ('2.2.1', 'kilo'),
     ('2.2.2', 'kilo'),
     ('2.3.0', 'liberty'),
+    ('2.4.0', 'liberty'),
 ])
 
 # >= Liberty version->codename mapping
@@ -141,6 +142,9 @@ PACKAGE_CODENAMES = {
     ]),
     'glance-common': OrderedDict([
         ('11.0.0', 'liberty'),
+    ]),
+    'openstack-dashboard': OrderedDict([
+        ('8.0.0', 'liberty'),
     ]),
 }
 

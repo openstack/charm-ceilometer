@@ -1,0 +1,4 @@
+pause:
+  description: Pause the Ceilometer unit.  This action will stop Ceilometer services.
+resume:
+  descrpition: Resume the Ceilometer unit.  This action will start Ceilometer services.
