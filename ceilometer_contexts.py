@@ -78,6 +78,7 @@ class CeilometerContext(OSContextGenerator):
         from ceilometer_utils import get_shared_secret
 
         ctxt = {
+            'api_workers': config('api-workers'),
             'port': CEILOMETER_PORT,
             'metering_secret': get_shared_secret()
         }
