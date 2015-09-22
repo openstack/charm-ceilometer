@@ -111,8 +111,11 @@ class CeilometerContextsTest(CharmTestCase):
     @patch.object(utils, 'get_shared_secret')
     def test_ceilometer_context(self, secret):
         secret.return_value = 'mysecret'
-        self.assertEquals(contexts.CeilometerContext()(),
-                          {'port': 8777, 'metering_secret': 'mysecret'})
+        self.assertEquals(contexts.CeilometerContext()(), {
+            'port': 8777,
+            'metering_secret': 'mysecret',
+            'api_workers': 1,
+        })
 
     def test_ceilometer_service_context(self):
         self.relation_ids.return_value = ['ceilometer-service:0']
