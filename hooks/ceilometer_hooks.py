@@ -136,8 +136,9 @@ def configure_https():
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
-    if openstack_upgrade_available('ceilometer-common'):
-        do_openstack_upgrade(CONFIGS)
+    if not config('action-managed-upgrade'):
+        if openstack_upgrade_available('ceilometer-common'):
+            do_openstack_upgrade(CONFIGS)
     update_nrpe_config()
     CONFIGS.write_all()
     ceilometer_joined()
