@@ -2,3 +2,5 @@ pause:
   description: Pause the Ceilometer unit.  This action will stop Ceilometer services.
 resume:
   descrpition: Resume the Ceilometer unit.  This action will start Ceilometer services.
+openstack-upgrade:
+  description: Perform openstack upgrades. Config option action-managed-upgrade must be set to True.
