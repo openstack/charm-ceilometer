@@ -62,7 +62,7 @@ hooks = Hooks()
 CONFIGS = register_configs()
 
 
-@hooks.hook()
+@hooks.hook('install.real')
 def install():
     execd_preinstall()
     origin = config('openstack-origin')
