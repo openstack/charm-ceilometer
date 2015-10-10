@@ -65,7 +65,7 @@ ICEHOUSE_SERVICES = [
 ]
 
 REQUIRED_INTERFACES = {
-    'database': ['shared-db'],
+    'database': ['mongodb'],
     'messaging': ['amqp'],
     'identity': ['identity-service'],
 }
