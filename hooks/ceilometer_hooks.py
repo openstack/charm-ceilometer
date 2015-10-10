@@ -18,6 +18,7 @@ from charmhelpers.core.hookenv import (
     config,
     Hooks, UnregisteredHookError,
     log,
+    status_set,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -71,6 +72,7 @@ def install():
     if (lsb_release()['DISTRIB_CODENAME'] == 'precise' and origin == 'distro'):
         origin = 'cloud:precise-grizzly'
     configure_installation_source(origin)
+    status_set('maintenance', 'Installing ceilometer packages')
     apt_update(fatal=True)
     apt_install(filter_installed_packages(get_packages()),
                 fatal=True)
@@ -140,6 +142,7 @@ def configure_https():
 def config_changed():
     if not config('action-managed-upgrade'):
         if openstack_upgrade_available('ceilometer-common'):
+            status_set('maintenance', 'Upgrading to new OpenStack release')
             do_openstack_upgrade(CONFIGS)
     update_nrpe_config()
     CONFIGS.write_all()
