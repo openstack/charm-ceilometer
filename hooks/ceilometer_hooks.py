@@ -72,10 +72,11 @@ def install():
     if (lsb_release()['DISTRIB_CODENAME'] == 'precise' and origin == 'distro'):
         origin = 'cloud:precise-grizzly'
     configure_installation_source(origin)
-    status_set('maintenance', 'Installing ceilometer packages')
-    apt_update(fatal=True)
-    apt_install(filter_installed_packages(get_packages()),
-                fatal=True)
+    packages = filter_installed_packages(get_packages())
+    if packages:
+        status_set('maintenance', 'Installing packages')
+        apt_update(fatal=True)
+        apt_install(packages, fatal=True)
     open_port(CEILOMETER_PORT)
 
 
