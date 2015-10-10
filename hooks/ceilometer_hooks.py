@@ -26,7 +26,8 @@ from charmhelpers.core.host import (
 )
 from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
-    openstack_upgrade_available
+    openstack_upgrade_available,
+    set_os_workload_status,
 )
 from ceilometer_utils import (
     get_packages,
@@ -40,6 +41,7 @@ from ceilometer_utils import (
     get_shared_secret,
     do_openstack_upgrade,
     set_shared_secret,
+    REQUIRED_INTERFACES,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -333,3 +335,4 @@ if __name__ == '__main__':
         hooks.execute(sys.argv)
     except UnregisteredHookError as e:
         log('Unknown hook {} - skipping.'.format(e))
+    set_os_workload_status(CONFIGS, REQUIRED_INTERFACES)

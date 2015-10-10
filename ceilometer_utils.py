@@ -64,6 +64,12 @@ ICEHOUSE_SERVICES = [
     'ceilometer-agent-notification'
 ]
 
+REQUIRED_INTERFACES = {
+    'database': ['shared-db'],
+    'messaging': ['amqp'],
+    'identity': ['identity-service'],
+}
+
 CEILOMETER_ROLE = "ResellerAdmin"
 SVC = 'ceilometer'
 
