@@ -18,6 +18,7 @@ from charmhelpers.core.hookenv import (
     config,
     Hooks, UnregisteredHookError,
     log,
+    status_set,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -26,7 +27,8 @@ from charmhelpers.core.host import (
 )
 from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
-    openstack_upgrade_available
+    openstack_upgrade_available,
+    set_os_workload_status,
 )
 from ceilometer_utils import (
     get_packages,
@@ -40,6 +42,7 @@ from ceilometer_utils import (
     get_shared_secret,
     do_openstack_upgrade,
     set_shared_secret,
+    REQUIRED_INTERFACES,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -69,9 +72,11 @@ def install():
     if (lsb_release()['DISTRIB_CODENAME'] == 'precise' and origin == 'distro'):
         origin = 'cloud:precise-grizzly'
     configure_installation_source(origin)
-    apt_update(fatal=True)
-    apt_install(filter_installed_packages(get_packages()),
-                fatal=True)
+    packages = filter_installed_packages(get_packages())
+    if packages:
+        status_set('maintenance', 'Installing packages')
+        apt_update(fatal=True)
+        apt_install(packages, fatal=True)
     open_port(CEILOMETER_PORT)
 
 
@@ -138,6 +143,7 @@ def configure_https():
 def config_changed():
     if not config('action-managed-upgrade'):
         if openstack_upgrade_available('ceilometer-common'):
+            status_set('maintenance', 'Upgrading to new OpenStack release')
             do_openstack_upgrade(CONFIGS)
     update_nrpe_config()
     CONFIGS.write_all()
@@ -333,3 +339,4 @@ if __name__ == '__main__':
         hooks.execute(sys.argv)
     except UnregisteredHookError as e:
         log('Unknown hook {} - skipping.'.format(e))
+    set_os_workload_status(CONFIGS, REQUIRED_INTERFACES)

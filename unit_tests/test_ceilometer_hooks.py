@@ -35,6 +35,7 @@ TO_PATCH = [
     'update_nrpe_config',
     'peer_store',
     'configure_https',
+    'status_set',
 ]
 
 
