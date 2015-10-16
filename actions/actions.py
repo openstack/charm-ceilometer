@@ -21,7 +21,7 @@ def pause(args):
 
     db = kv()
     db.set('unit-paused', True)
-    db.update()
+    db.flush()
 
     status_set(
         "maintenance",
@@ -38,7 +38,7 @@ def resume(args):
 
     db = kv()
     db.set('unit-paused', False)
-    db.update()
+    db.flush()
 
     assess_status(CONFIGS)
 
