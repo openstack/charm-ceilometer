@@ -5,7 +5,9 @@ import sys
 
 from charmhelpers.core.host import service_pause, service_resume
 from charmhelpers.core.hookenv import action_fail, status_set
-from ceilometer_utils import CEILOMETER_SERVICES
+from charmhelpers.core.unitdata import kv
+from ceilometer_utils import CEILOMETER_SERVICES, assess_status
+from ceilometer_hooks import CONFIGS
 
 
 def pause(args):
@@ -16,8 +18,15 @@ def pause(args):
     for service in CEILOMETER_SERVICES:
         if not service_pause(service):
             raise Exception("Failed to %s." % service)
+
+    db = kv()
+    db.set('unit-paused', True)
+    db.update()
+
     status_set(
-        "maintenance", "Paused. Use 'resume' action to resume normal service.")
+        "maintenance",
+        "Unit paused - use 'resume' action to resume normal service")
+
 
 def resume(args):
     """Resume the Ceilometer services.
@@ -26,7 +35,12 @@ def resume(args):
     for service in CEILOMETER_SERVICES:
         if not service_resume(service):
             raise Exception("Failed to resume %s." % service)
-    status_set("active", "")
+
+    db = kv()
+    db.set('unit-paused', False)
+    db.update()
+
+    assess_status(CONFIGS)
 
 
 # A dictionary of all the defined actions to callables (which take
@@ -49,4 +63,3 @@ def main(args):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
-
