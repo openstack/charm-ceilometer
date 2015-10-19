@@ -1,10 +1,4 @@
-#!/usr/bin/python
-
 import subprocess
-
-"""
-Basic ceilometer functional tests.
-"""
 import amulet
 import json
 import time
@@ -35,6 +29,11 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         self._add_relations()
         self._configure_services()
         self._deploy()
+
+        u.log.info('Waiting on extended status checks...')
+        exclude_services = ['mysql', 'mongodb']
+        self._auto_wait_for_status(exclude_services=exclude_services)
+
         self._initialize_tests()
 
     def _add_services(self):
@@ -49,6 +48,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                           {'name': 'rabbitmq-server'},
                           {'name': 'keystone'},
                           {'name': 'mongodb'},
+                          {'name': 'glance'},  # to satisfy workload status
                           {'name': 'ceilometer-agent'},
                           {'name': 'nova-compute'}]
         super(CeilometerBasicDeployment, self)._add_services(this_service,
@@ -67,7 +67,11 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                                              'ceilometer-service',
             'nova-compute:nova-ceilometer': 'ceilometer-agent:nova-ceilometer',
             'nova-compute:shared-db': 'mysql:shared-db',
-            'nova-compute:amqp': 'rabbitmq-server:amqp'
+            'nova-compute:amqp': 'rabbitmq-server:amqp',
+            'glance:identity-service': 'keystone:identity-service',
+            'glance:shared-db': 'mysql:shared-db',
+            'glance:amqp': 'rabbitmq-server:amqp',
+            'nova-compute:image-service': 'glance:image-service'
         }
         super(CeilometerBasicDeployment, self)._add_relations(relations)
 
@@ -95,9 +99,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             self._get_openstack_release()))
         u.log.debug('openstack release str: {}'.format(
             self._get_openstack_release_string()))
-
-        # Let things settle a bit before moving forward
-        time.sleep(30)
 
         # Authenticate admin with keystone endpoint
         self.keystone = u.authenticate_keystone_admin(self.keystone_sentry,
@@ -569,38 +570,42 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         set_default = {'debug': 'False'}
         set_alternate = {'debug': 'True'}
 
-        # Config file affected by juju set config change
+        # Services which are expected to restart upon config change,
+        # and corresponding config files affected by the change
         conf_file = '/etc/ceilometer/ceilometer.conf'
-
-        # Services which are expected to restart upon config change
-        services = [
-            'ceilometer-agent-central',
-            'ceilometer-collector',
-            'ceilometer-api',
-            'ceilometer-alarm-evaluator',
-            'ceilometer-alarm-notifier',
-            'ceilometer-agent-notification',
-        ]
+        services = {
+            'ceilometer-agent-central': conf_file,
+            'ceilometer-collector': conf_file,
+            'ceilometer-api': conf_file,
+            'ceilometer-alarm-evaluator': conf_file,
+            'ceilometer-alarm-notifier': conf_file,
+            'ceilometer-agent-notification': conf_file,
+        }
 
         # Make config change, check for service restarts
         u.log.debug('Making config change on {}...'.format(juju_service))
+        mtime = u.get_sentry_time(sentry)
         self.d.configure(juju_service, set_alternate)
 
         sleep_time = 40
-        for s in services:
+        for s, conf_file in services.iteritems():
             u.log.debug("Checking that service restarted: {}".format(s))
-            if not u.service_restarted(sentry, s,
-                                       conf_file, sleep_time=sleep_time,
-                                       pgrep_full=True):
+            if not u.validate_service_config_changed(sentry, mtime, s,
+                                                     conf_file,
+                                                     retry_count=4,
+                                                     retry_sleep_time=20,
+                                                     sleep_time=sleep_time):
                 self.d.configure(juju_service, set_default)
                 msg = "service {} didn't restart after config change".format(s)
                 amulet.raise_status(amulet.FAIL, msg=msg)
-            sleep_time = 0
+                sleep_time = 0
 
         self.d.configure(juju_service, set_default)
+        u.log.debug('OK')
 
-    def test_1000_pause_and_resume(self):
+    def test_910_pause_and_resume(self):
         """The services can be paused and resumed. """
+        u.log.debug('Checking pause and resume actions...')
         unit_name = "ceilometer/0"
         unit = self.d.sentry.unit[unit_name]
 
@@ -613,3 +618,4 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         action_id = self._run_action(unit_name, "resume")
         assert self._wait_on_action(action_id), "Resume action failed."
         assert u.status_get(unit)[0] == "active"
+        u.log.debug('OK')
