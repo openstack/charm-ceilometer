@@ -604,7 +604,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         unit_name = "ceilometer/0"
         unit = self.d.sentry.unit[unit_name]
 
-        assert u.status_get(unit)[0] == "unknown"
+        assert u.status_get(unit)[0] == "active"
 
         action_id = self._run_action(unit_name, "pause")
         assert self._wait_on_action(action_id), "Pause action failed."
