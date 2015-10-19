@@ -598,7 +598,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 self.d.configure(juju_service, set_default)
                 msg = "service {} didn't restart after config change".format(s)
                 amulet.raise_status(amulet.FAIL, msg=msg)
-                sleep_time = 0
+            sleep_time = 0
 
         self.d.configure(juju_service, set_default)
         u.log.debug('OK')
