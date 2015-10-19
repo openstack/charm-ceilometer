@@ -17,9 +17,11 @@ from ceilometer_contexts import (
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
     get_os_codename_install_source,
-    configure_installation_source
+    configure_installation_source,
+    set_os_workload_status,
 )
-from charmhelpers.core.hookenv import config, log
+from charmhelpers.core.hookenv import config, log, status_set
+from charmhelpers.core.unitdata import kv
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
 from copy import deepcopy
 
@@ -229,3 +231,22 @@ def set_shared_secret(secret):
     """
     with open(SHARED_SECRET, 'w') as secret_file:
         secret_file.write(secret)
+
+
+def is_paused():
+    '''Determine if current unit is in a paused state'''
+    db = kv()
+    if db.get('unit-paused'):
+        return True
+    else:
+        return False
+
+
+def assess_status(configs):
+    if is_paused():
+        status_set("maintenance",
+                   "Unit paused - use 'resume' action "
+                   "to resume normal service")
+        return
+
+    set_os_workload_status(configs, REQUIRED_INTERFACES)
