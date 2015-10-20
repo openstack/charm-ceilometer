@@ -377,9 +377,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'type': 'database',
         }
 
-        if self._get_openstack_release() == self.precise_icehouse:
-            expected['replset'] = 'myset'
-
         ret = u.validate_relation_data(unit, relation, expected)
         if ret:
             message = u.relation_error('mongodb database', ret)
@@ -622,13 +619,20 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         # and corresponding config files affected by the change
         conf_file = '/etc/ceilometer/ceilometer.conf'
         services = {
-            'ceilometer-agent-central': conf_file,
             'ceilometer-collector': conf_file,
             'ceilometer-api': conf_file,
             'ceilometer-alarm-evaluator': conf_file,
             'ceilometer-alarm-notifier': conf_file,
             'ceilometer-agent-notification': conf_file,
         }
+
+        if self._get_openstack_release() == self.trusty_liberty or \
+                self._get_openstack_release() >= self.wily_liberty:
+            # Liberty and later
+            services['ceilometer-polling'] = conf_file
+        else:
+            # Juno and earlier
+            services['ceilometer-agent-central'] = conf_file
 
         # Make config change, check for service restarts
         u.log.debug('Making config change on {}...'.format(juju_service))
