@@ -1,10 +1,4 @@
-#!/usr/bin/python
-
 import subprocess
-
-"""
-Basic ceilometer functional tests.
-"""
 import amulet
 import json
 import time
@@ -35,6 +29,11 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         self._add_relations()
         self._configure_services()
         self._deploy()
+
+        u.log.info('Waiting on extended status checks...')
+        exclude_services = ['mysql', 'mongodb']
+        self._auto_wait_for_status(exclude_services=exclude_services)
+
         self._initialize_tests()
 
     def _add_services(self):
@@ -49,6 +48,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                           {'name': 'rabbitmq-server'},
                           {'name': 'keystone'},
                           {'name': 'mongodb'},
+                          {'name': 'glance'},  # to satisfy workload status
                           {'name': 'ceilometer-agent'},
                           {'name': 'nova-compute'}]
         super(CeilometerBasicDeployment, self)._add_services(this_service,
@@ -67,7 +67,11 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                                              'ceilometer-service',
             'nova-compute:nova-ceilometer': 'ceilometer-agent:nova-ceilometer',
             'nova-compute:shared-db': 'mysql:shared-db',
-            'nova-compute:amqp': 'rabbitmq-server:amqp'
+            'nova-compute:amqp': 'rabbitmq-server:amqp',
+            'glance:identity-service': 'keystone:identity-service',
+            'glance:shared-db': 'mysql:shared-db',
+            'glance:amqp': 'rabbitmq-server:amqp',
+            'nova-compute:image-service': 'glance:image-service'
         }
         super(CeilometerBasicDeployment, self)._add_relations(relations)
 
@@ -95,9 +99,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             self._get_openstack_release()))
         u.log.debug('openstack release str: {}'.format(
             self._get_openstack_release_string()))
-
-        # Let things settle a bit before moving forward
-        time.sleep(30)
 
         # Authenticate admin with keystone endpoint
         self.keystone = u.authenticate_keystone_admin(self.keystone_sentry,
@@ -139,6 +140,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
     def test_100_services(self):
         """Verify the expected services are running on the corresponding
            service units."""
+        u.log.debug('Checking system services on units...')
+
         ceilometer_svcs = [
             'ceilometer-agent-central',
             'ceilometer-collector',
@@ -158,6 +161,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         ret = u.validate_services_by_name(service_names)
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
+
+        u.log.debug('OK')
 
     def test_110_service_catalog(self):
         """Verify that the service catalog endpoint data is valid."""
@@ -179,6 +184,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
 
+        u.log.debug('OK')
+
     def test_112_keystone_api_endpoint(self):
         """Verify the ceilometer api endpoint data."""
         u.log.debug('Checking keystone api endpoint data...')
@@ -199,6 +206,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             message = 'Keystone endpoint: {}'.format(ret)
             amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_114_ceilometer_api_endpoint(self):
         """Verify the ceilometer api endpoint data."""
         u.log.debug('Checking ceilometer api endpoint data...')
@@ -217,6 +226,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         if ret:
             message = 'Ceilometer endpoint: {}'.format(ret)
             amulet.raise_status(amulet.FAIL, msg=message)
+
+        u.log.debug('OK')
 
     def test_200_ceilometer_identity_relation(self):
         """Verify the ceilometer to keystone identity-service relation data"""
@@ -242,6 +253,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         if ret:
             message = u.relation_error('ceilometer identity-service', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
+
+        u.log.debug('OK')
 
     def test_201_keystone_ceilometer_identity_relation(self):
         """Verify the keystone to ceilometer identity-service relation data"""
@@ -270,19 +283,34 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             message = u.relation_error('keystone identity-service', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_202_keystone_ceilometer_identity_notes_relation(self):
         """Verify ceilometer to keystone identity-notifications relation"""
         u.log.debug('Checking keystone:ceilometer '
                     'identity-notifications relation data...')
+
+        # Relation data may vary depending on timing of hooks and relations.
+        # May be glance- or keystone- or another endpoint-changed value, so
+        # check that at least one ???-endpoint-changed value exists.
         unit = self.keystone_sentry
-        relation = ['identity-service', 'ceilometer:identity-notifications']
-        expected = {
-            'ceilometer-endpoint-changed': u.not_null,
-        }
-        ret = u.validate_relation_data(unit, relation, expected)
-        if ret:
-            message = u.relation_error('keystone identity-notifications', ret)
+        relation_data = unit.relation('identity-service',
+                                      'ceilometer:identity-notifications')
+
+        expected = '-endpoint-changed'
+        found = 0
+        for key in relation_data.keys():
+            if expected in key and relation_data[key]:
+                found += 1
+                u.log.debug('{}: {}'.format(key, relation_data[key]))
+
+        if not found:
+            message = ('keystone:ceilometer identity-notification relation '
+                       'error\n expected something like: {}\n actual: '
+                       '{}'.format(expected, relation_data))
             amulet.raise_status(amulet.FAIL, msg=message)
+
+        u.log.debug('OK')
 
     def test_203_ceilometer_amqp_relation(self):
         """Verify the ceilometer to rabbitmq-server amqp relation data"""
@@ -300,6 +328,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             message = u.relation_error('ceilometer amqp', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_204_amqp_ceilometer_relation(self):
         """Verify the rabbitmq-server to ceilometer amqp relation data"""
         u.log.debug('Checking rabbitmq:ceilometer amqp relation data...')
@@ -316,6 +346,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             message = u.relation_error('rabbitmq amqp', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_205_ceilometer_to_mongodb_relation(self):
         """Verify the ceilometer to mongodb relation data"""
         u.log.debug('Checking ceilometer:mongodb relation data...')
@@ -331,6 +363,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             message = u.relation_error('ceilometer shared-db', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_206_mongodb_to_ceilometer_relation(self):
         """Verify the mongodb to ceilometer relation data"""
         u.log.debug('Checking mongodb:ceilometer relation data...')
@@ -343,13 +377,12 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'type': 'database',
         }
 
-        if self._get_openstack_release() == self.precise_icehouse:
-            expected['replset'] = 'myset'
-
         ret = u.validate_relation_data(unit, relation, expected)
         if ret:
             message = u.relation_error('mongodb database', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
+
+        u.log.debug('OK')
 
     def test_207_ceilometer_ceilometer_agent_relation(self):
         """Verify the ceilometer to ceilometer-agent relation data"""
@@ -379,6 +412,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             message = u.relation_error('ceilometer-service', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_208_ceilometer_agent_ceilometer_relation(self):
         """Verify the ceilometer-agent to ceilometer relation data"""
         u.log.debug('Checking ceilometer-agent:ceilometer relation data...')
@@ -390,6 +425,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         if ret:
             message = u.relation_error('ceilometer-service', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
+
+        u.log.debug('OK')
 
     def test_209_nova_compute_ceilometer_agent_relation(self):
         """Verify the nova-compute to ceilometer relation data"""
@@ -424,6 +461,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         if ret:
             message = u.relation_error('ceilometer-service', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
+
+        u.log.debug('OK')
 
     def test_300_ceilometer_config(self):
         """Verify the data in the ceilometer config file."""
@@ -480,6 +519,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 message = "ceilometer config error: {}".format(ret)
                 amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_301_nova_config(self):
         """Verify data in the nova compute nova config file"""
         u.log.debug('Checking nova compute config file...')
@@ -528,6 +569,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
 
+        u.log.debug('OK')
+
     def test_302_nova_ceilometer_config(self):
         """Verify data in the ceilometer config file on the
         nova-compute (ceilometer-agent) unit."""
@@ -550,11 +593,14 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 message = "ceilometer config error: {}".format(ret)
                 amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_400_api_connection(self):
         """Simple api calls to check service is up and responding"""
         u.log.debug('Checking api functionality...')
         assert(self.ceil.samples.list() == [])
         assert(self.ceil.meters.list() == [])
+        u.log.debug('OK')
 
     # NOTE(beisner): need to add more functional tests
 
@@ -569,38 +615,49 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         set_default = {'debug': 'False'}
         set_alternate = {'debug': 'True'}
 
-        # Config file affected by juju set config change
+        # Services which are expected to restart upon config change,
+        # and corresponding config files affected by the change
         conf_file = '/etc/ceilometer/ceilometer.conf'
+        services = {
+            'ceilometer-collector': conf_file,
+            'ceilometer-api': conf_file,
+            'ceilometer-alarm-evaluator': conf_file,
+            'ceilometer-alarm-notifier': conf_file,
+            'ceilometer-agent-notification': conf_file,
+        }
 
-        # Services which are expected to restart upon config change
-        services = [
-            'ceilometer-agent-central',
-            'ceilometer-collector',
-            'ceilometer-api',
-            'ceilometer-alarm-evaluator',
-            'ceilometer-alarm-notifier',
-            'ceilometer-agent-notification',
-        ]
+        if self._get_openstack_release() == self.trusty_liberty or \
+                self._get_openstack_release() >= self.wily_liberty:
+            # Liberty and later
+            services['ceilometer-polling'] = conf_file
+        else:
+            # Juno and earlier
+            services['ceilometer-agent-central'] = conf_file
 
         # Make config change, check for service restarts
         u.log.debug('Making config change on {}...'.format(juju_service))
+        mtime = u.get_sentry_time(sentry)
         self.d.configure(juju_service, set_alternate)
 
         sleep_time = 40
-        for s in services:
+        for s, conf_file in services.iteritems():
             u.log.debug("Checking that service restarted: {}".format(s))
-            if not u.service_restarted(sentry, s,
-                                       conf_file, sleep_time=sleep_time,
-                                       pgrep_full=True):
+            if not u.validate_service_config_changed(sentry, mtime, s,
+                                                     conf_file,
+                                                     retry_count=4,
+                                                     retry_sleep_time=20,
+                                                     sleep_time=sleep_time):
                 self.d.configure(juju_service, set_default)
                 msg = "service {} didn't restart after config change".format(s)
                 amulet.raise_status(amulet.FAIL, msg=msg)
             sleep_time = 0
 
         self.d.configure(juju_service, set_default)
+        u.log.debug('OK')
 
-    def test_1000_pause_and_resume(self):
+    def test_910_pause_and_resume(self):
         """The services can be paused and resumed. """
+        u.log.debug('Checking pause and resume actions...')
         unit_name = "ceilometer/0"
         unit = self.d.sentry.unit[unit_name]
 
@@ -613,3 +670,4 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         action_id = self._run_action(unit_name, "resume")
         assert self._wait_on_action(action_id), "Resume action failed."
         assert u.status_get(unit)[0] == "active"
+        u.log.debug('OK')
