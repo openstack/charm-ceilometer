@@ -1,6 +1,6 @@
 name: ceilometer
-summary: Openstack measures collection system
-maintainer: Yolanda Robla <yolanda.robla@canonical.com>
+summary: OpenStack Telemetry
+maintainer: OpenStack Charmers <openstack-charmers@lists.ubuntu.com>
 description: |
  Ceilometer project aims to become the infrastructure to collect measurements
  within OpenStack so that no two agents would need to be written to collect
