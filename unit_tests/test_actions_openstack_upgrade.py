@@ -4,7 +4,7 @@ import os
 os.environ['JUJU_UNIT_NAME'] = 'ceilometer'
 
 with patch('ceilometer_utils.register_configs') as register_configs:
-    with patch('ceilometer_utils.ceilometer_release_services') as release_services:
+    with patch('ceilometer_utils.ceilometer_release_services') as rel_services:
         import openstack_upgrade
 
 from test_utils import (
