@@ -33,19 +33,29 @@ HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
     "openstack_https_frontend.conf"
 CLUSTER_RES = 'grp_ceilometer_vips'
 
-CEILOMETER_SERVICES = [
+CEILOMETER_BASE_SERVICES = [
     'ceilometer-agent-central',
     'ceilometer-collector',
     'ceilometer-api',
-    'ceilometer-alarm-evaluator',
-    'ceilometer-alarm-notifier',
     'ceilometer-agent-notification',
+]
+
+ICEHOUSE_SERVICES = [
+    'ceilometer-alarm-notifier',
+    'ceilometer-alarm-evaluator',
+    'ceilometer-agent-notification'
+]
+
+MITAKA_SERVICES = [
+    'aodh-notifier',
+    'aodh-evaluator',
+    'ceilometer-agent-notification'
 ]
 
 CEILOMETER_DB = "ceilometer"
 CEILOMETER_SERVICE = "ceilometer"
 
-CEILOMETER_PACKAGES = [
+CEILOMETER_BASE_PACKAGES = [
     'haproxy',
     'apache2',
     'ceilometer-agent-central',
@@ -60,9 +70,9 @@ ICEHOUSE_PACKAGES = [
     'ceilometer-agent-notification'
 ]
 
-ICEHOUSE_SERVICES = [
-    'ceilometer-alarm-notifier',
-    'ceilometer-alarm-evaluator',
+MITAKA_PACKAGES = [
+    'aodh-notifier',
+    'aodh-evaluator',
     'ceilometer-agent-notification'
 ]
 
@@ -85,7 +95,7 @@ CONFIG_FILES = OrderedDict([
                           CeilometerContext(),
                           context.SyslogContext(),
                           HAProxyContext()],
-        'services': CEILOMETER_SERVICES
+        'services': CEILOMETER_BASE_SERVICES
     }),
     (HAPROXY_CONF, {
         'hook_contexts': [context.HAProxyContext(singlenode_mode=True),
@@ -121,10 +131,9 @@ def register_configs():
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
 
-    if (get_os_codename_install_source(
-            config('openstack-origin')) >= 'icehouse'):
-        CONFIG_FILES[CEILOMETER_CONF]['services'] = \
-            CONFIG_FILES[CEILOMETER_CONF]['services'] + ICEHOUSE_SERVICES
+    CONFIG_FILES[CEILOMETER_CONF]['services'] = (
+        CONFIG_FILES[CEILOMETER_CONF]['services'] +
+        ceilometer_release_services())
 
     for conf in CONFIG_FILES:
         configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
@@ -151,8 +160,12 @@ def restart_map():
         svcs = []
         for svc in ctxt['services']:
             svcs.append(svc)
+        if f == CEILOMETER_CONF:
+            for svc in ceilometer_release_services():
+                svcs.append(svc)
         if svcs:
             _map[f] = svcs
+
     return _map
 
 
@@ -200,11 +213,29 @@ def do_openstack_upgrade(configs):
     configs.set_release(openstack_release=new_os_rel)
 
 
+def ceilometer_release_services():
+    codename = get_os_codename_install_source(config('openstack-origin'))
+    if codename >= 'mitaka':
+        return MITAKA_SERVICES
+    elif codename >= 'icehouse':
+        return ICEHOUSE_SERVICES
+    else:
+        return []
+
+
+def ceilometer_release_packages():
+    codename = get_os_codename_install_source(config('openstack-origin'))
+    if codename >= 'mitaka':
+        return MITAKA_PACKAGES
+    elif codename >= 'icehouse':
+        return ICEHOUSE_PACKAGES
+    else:
+        return []
+
+
 def get_packages():
-    packages = deepcopy(CEILOMETER_PACKAGES)
-    if (get_os_codename_install_source(
-            config('openstack-origin')) >= 'icehouse'):
-        packages = packages + ICEHOUSE_PACKAGES
+    packages = (deepcopy(CEILOMETER_BASE_PACKAGES) +
+                ceilometer_release_packages())
     return packages
 
 

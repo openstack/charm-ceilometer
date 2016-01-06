@@ -6,7 +6,9 @@ import sys
 from charmhelpers.core.host import service_pause, service_resume
 from charmhelpers.core.hookenv import action_fail, status_set
 from charmhelpers.core.unitdata import kv
-from ceilometer_utils import CEILOMETER_SERVICES, assess_status
+from ceilometer_utils import (
+    CEILOMETER_BASE_SERVICES, assess_status, ceilometer_release_services,
+)
 from ceilometer_hooks import CONFIGS
 
 
@@ -15,7 +17,8 @@ def pause(args):
 
     @raises Exception should the service fail to stop.
     """
-    for service in CEILOMETER_SERVICES:
+    services = CEILOMETER_BASE_SERVICES + ceilometer_release_services()
+    for service in services:
         if not service_pause(service):
             raise Exception("Failed to %s." % service)
 
@@ -32,7 +35,8 @@ def resume(args):
     """Resume the Ceilometer services.
 
     @raises Exception should the service fail to start."""
-    for service in CEILOMETER_SERVICES:
+    services = CEILOMETER_BASE_SERVICES + ceilometer_release_services()
+    for service in services:
         if not service_resume(service):
             raise Exception("Failed to resume %s." % service)
 
