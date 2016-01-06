@@ -44,7 +44,8 @@ class CeilometerHooksTest(CharmTestCase):
     def setUp(self):
         super(CeilometerHooksTest, self).setUp(hooks, TO_PATCH)
         self.config.side_effect = self.test_config.get
-        self.get_packages.return_value = ceilometer_utils.CEILOMETER_BASE_PACKAGES
+        self.get_packages.return_value = \
+            ceilometer_utils.CEILOMETER_BASE_PACKAGES
         self.filter_installed_packages.return_value = \
             ceilometer_utils.CEILOMETER_BASE_PACKAGES
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}

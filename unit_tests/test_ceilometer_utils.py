@@ -95,9 +95,11 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_get_packages_icehouse(self):
         self.get_os_codename_install_source.return_value = 'icehouse'
         self.assertEqual(utils.get_packages(),
-                         utils.CEILOMETER_BASE_PACKAGES + utils.ICEHOUSE_PACKAGES)
+                         utils.CEILOMETER_BASE_PACKAGES +
+                         utils.ICEHOUSE_PACKAGES)
 
     def test_get_packages_mitaka(self):
         self.get_os_codename_install_source.return_value = 'mitaka'
         self.assertEqual(utils.get_packages(),
-                         utils.CEILOMETER_BASE_PACKAGES + utils.MITAKA_PACKAGES)
+                         utils.CEILOMETER_BASE_PACKAGES +
+                         utils.MITAKA_PACKAGES)
