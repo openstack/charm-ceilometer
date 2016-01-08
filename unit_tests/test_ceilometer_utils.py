@@ -45,8 +45,6 @@ class CeilometerUtilsTest(CharmTestCase):
                 'ceilometer-agent-central',
                 'ceilometer-collector',
                 'ceilometer-api',
-                'ceilometer-alarm-evaluator',
-                'ceilometer-alarm-notifier',
                 'ceilometer-agent-notification'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],
              "/etc/apache2/sites-available/openstack_https_frontend": [
@@ -82,7 +80,7 @@ class CeilometerUtilsTest(CharmTestCase):
             '--option', 'Dpkg::Options::=--force-confdef',
         ]
         self.apt_install.assert_called_with(
-            packages=utils.CEILOMETER_PACKAGES,
+            packages=utils.CEILOMETER_BASE_PACKAGES,
             options=dpkg_opts, fatal=True
         )
         self.configure_installation_source.assert_called_with(
@@ -92,9 +90,16 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_get_packages(self):
         self.get_os_codename_install_source.return_value = 'havana'
         self.assertEqual(utils.get_packages(),
-                         utils.CEILOMETER_PACKAGES)
+                         utils.CEILOMETER_BASE_PACKAGES)
 
     def test_get_packages_icehouse(self):
         self.get_os_codename_install_source.return_value = 'icehouse'
         self.assertEqual(utils.get_packages(),
-                         utils.CEILOMETER_PACKAGES + utils.ICEHOUSE_PACKAGES)
+                         utils.CEILOMETER_BASE_PACKAGES +
+                         utils.ICEHOUSE_PACKAGES)
+
+    def test_get_packages_mitaka(self):
+        self.get_os_codename_install_source.return_value = 'mitaka'
+        self.assertEqual(utils.get_packages(),
+                         utils.CEILOMETER_BASE_PACKAGES +
+                         utils.MITAKA_PACKAGES)
