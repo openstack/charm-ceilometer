@@ -1,0 +1,9 @@
+#!/usr/bin/python
+
+"""Amulet tests on a basic ceilometer deployment on xenial-mitaka."""
+
+from basic_deployment import CeilometerBasicDeployment
+
+if __name__ == '__main__':
+    deployment = CeilometerBasicDeployment(series='xenial')
+    deployment.run_tests()
