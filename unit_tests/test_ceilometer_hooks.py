@@ -44,9 +44,10 @@ class CeilometerHooksTest(CharmTestCase):
     def setUp(self):
         super(CeilometerHooksTest, self).setUp(hooks, TO_PATCH)
         self.config.side_effect = self.test_config.get
-        self.get_packages.return_value = ceilometer_utils.CEILOMETER_PACKAGES
+        self.get_packages.return_value = \
+            ceilometer_utils.CEILOMETER_BASE_PACKAGES
         self.filter_installed_packages.return_value = \
-            ceilometer_utils.CEILOMETER_PACKAGES
+            ceilometer_utils.CEILOMETER_BASE_PACKAGES
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}
 
     @patch('charmhelpers.payload.execd.default_execd_dir',
@@ -68,7 +69,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
         self.apt_update.assert_called_with(fatal=True)
         self.apt_install.assert_called_with(
-            ceilometer_utils.CEILOMETER_PACKAGES,
+            ceilometer_utils.CEILOMETER_BASE_PACKAGES,
             fatal=True
         )
 
@@ -83,7 +84,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
         self.apt_update.assert_called_with(fatal=True)
         self.apt_install.assert_called_with(
-            ceilometer_utils.CEILOMETER_PACKAGES,
+            ceilometer_utils.CEILOMETER_BASE_PACKAGES,
             fatal=True
         )
 
