@@ -16,7 +16,6 @@ from test_utils import CharmTestCase
 TO_PATCH = [
     'relation_get',
     'relation_set',
-    'relation_get',
     'configure_installation_source',
     'openstack_upgrade_available',
     'do_openstack_upgrade',
@@ -33,6 +32,7 @@ TO_PATCH = [
     'get_packages',
     'service_restart',
     'update_nrpe_config',
+    'peer_retrieve',
     'peer_store',
     'configure_https',
     'status_set',
@@ -234,7 +234,7 @@ class CeilometerHooksTest(CharmTestCase):
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'set_shared_secret')
     def test_cluster_changed(self, shared_secret, mock_config):
-        self.relation_get.return_value = None
+        self.peer_retrieve.return_value = None
         hooks.hooks.execute(['hooks/cluster-relation-changed'])
         self.assertFalse(shared_secret.called)
 
@@ -243,7 +243,7 @@ class CeilometerHooksTest(CharmTestCase):
     @patch.object(hooks, 'set_shared_secret')
     def test_cluster_changed_new_secret(self, mock_set_secret, mock_get_secret,
                                         mock_config):
-        self.relation_get.return_value = "leader_secret"
+        self.peer_retrieve.return_value = "leader_secret"
         mock_get_secret.return_value = "my_secret"
         hooks.hooks.execute(['hooks/cluster-relation-changed'])
         mock_set_secret.assert_called_with("leader_secret")
@@ -253,7 +253,7 @@ class CeilometerHooksTest(CharmTestCase):
     @patch.object(hooks, 'set_shared_secret')
     def test_cluster_changed_old_secret(self, mock_set_secret, mock_get_secret,
                                         mock_config):
-        self.relation_get.return_value = "leader_secret"
+        self.peer_retrieve.return_value = "leader_secret"
         mock_get_secret.return_value = "leader_secret"
         hooks.hooks.execute(['hooks/cluster-relation-changed'])
         self.assertEquals(mock_set_secret.call_count, 0)
