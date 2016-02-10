@@ -57,7 +57,10 @@ from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
     is_elected_leader
 )
-from charmhelpers.contrib.peerstorage import peer_store
+from charmhelpers.contrib.peerstorage import (
+    peer_retrieve,
+    peer_store,
+)
 from charmhelpers.payload.execd import execd_preinstall
 
 hooks = Hooks()
@@ -185,7 +188,7 @@ def cluster_joined():
             'cluster-relation-departed')
 @restart_on_change(restart_map(), stopstart=True)
 def cluster_changed():
-    shared_secret = relation_get('shared_secret')
+    shared_secret = peer_retrieve('shared_secret')
     if shared_secret is None or shared_secret.strip() == '':
         log('waiting for shared secret to be provided by leader')
     elif not shared_secret == get_shared_secret():
