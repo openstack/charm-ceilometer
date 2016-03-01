@@ -109,6 +109,7 @@ def identity_service_relation_changed():
     CONFIGS.write_all()
     configure_https()
     keystone_joined()
+    ceilometer_joined()
 
 
 @hooks.hook("amqp-relation-departed")
