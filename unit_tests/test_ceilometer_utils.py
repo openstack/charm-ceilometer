@@ -37,7 +37,44 @@ class CeilometerUtilsTest(CharmTestCase):
                               utils.CONFIG_FILES[conf]['hook_contexts']))
         configs.register.assert_has_calls(calls, any_order=True)
 
+    def test_ceilometer_release_services(self):
+        """Ensure that icehouse specific services are identified"""
+        self.get_os_codename_install_source.return_value = 'icehouse'
+        self.assertEqual(['ceilometer-alarm-notifier',
+                          'ceilometer-alarm-evaluator',
+                          'ceilometer-agent-notification'],
+                         utils.ceilometer_release_services())
+
+    def test_ceilometer_release_services_mitaka(self):
+        """Ensure that mitaka specific services are identified"""
+        self.get_os_codename_install_source.return_value = 'mitaka'
+        self.assertEqual(['ceilometer-agent-notification'],
+                         utils.ceilometer_release_services())
+
     def test_restart_map(self):
+        """Ensure that alarming services are present for < OpenStack Mitaka"""
+        self.get_os_codename_install_source.return_value = 'icehouse'
+        restart_map = utils.restart_map()
+        self.assertEquals(
+            restart_map,
+            {'/etc/ceilometer/ceilometer.conf': [
+                'ceilometer-agent-central',
+                'ceilometer-collector',
+                'ceilometer-api',
+                'ceilometer-alarm-notifier',
+                'ceilometer-alarm-evaluator',
+                'ceilometer-agent-notification'],
+             '/etc/haproxy/haproxy.cfg': ['haproxy'],
+             "/etc/apache2/sites-available/openstack_https_frontend": [
+                 'apache2'],
+             "/etc/apache2/sites-available/openstack_https_frontend.conf": [
+                 'apache2']
+             }
+        )
+
+    def test_restart_map_mitaka(self):
+        """Ensure that alarming services are missing for OpenStack Mitaka"""
+        self.get_os_codename_install_source.return_value = 'mitaka'
         restart_map = utils.restart_map()
         self.assertEquals(
             restart_map,
@@ -68,11 +105,11 @@ class CeilometerUtilsTest(CharmTestCase):
 
     def test_do_openstack_upgrade(self):
         self.config.side_effect = self.test_config.get
-        self.test_config.set('openstack-origin', 'cloud:precise-havana')
-        self.get_os_codename_install_source.return_value = 'havana'
+        self.test_config.set('openstack-origin', 'cloud:trusty-kilo')
+        self.get_os_codename_install_source.return_value = 'kilo'
         configs = MagicMock()
         utils.do_openstack_upgrade(configs)
-        configs.set_release.assert_called_with(openstack_release='havana')
+        configs.set_release.assert_called_with(openstack_release='kilo')
         self.assertTrue(self.log.called)
         self.apt_update.assert_called_with(fatal=True)
         dpkg_opts = [
@@ -80,17 +117,12 @@ class CeilometerUtilsTest(CharmTestCase):
             '--option', 'Dpkg::Options::=--force-confdef',
         ]
         self.apt_install.assert_called_with(
-            packages=utils.CEILOMETER_BASE_PACKAGES,
+            packages=utils.CEILOMETER_BASE_PACKAGES + utils.ICEHOUSE_PACKAGES,
             options=dpkg_opts, fatal=True
         )
         self.configure_installation_source.assert_called_with(
-            'cloud:precise-havana'
+            'cloud:trusty-kilo'
         )
-
-    def test_get_packages(self):
-        self.get_os_codename_install_source.return_value = 'havana'
-        self.assertEqual(utils.get_packages(),
-                         utils.CEILOMETER_BASE_PACKAGES)
 
     def test_get_packages_icehouse(self):
         self.get_os_codename_install_source.return_value = 'icehouse'

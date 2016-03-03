@@ -37,7 +37,6 @@ CEILOMETER_BASE_SERVICES = [
     'ceilometer-agent-central',
     'ceilometer-collector',
     'ceilometer-api',
-    'ceilometer-agent-notification',
 ]
 
 ICEHOUSE_SERVICES = [
@@ -47,8 +46,6 @@ ICEHOUSE_SERVICES = [
 ]
 
 MITAKA_SERVICES = [
-    'aodh-notifier',
-    'aodh-evaluator',
     'ceilometer-agent-notification'
 ]
 
@@ -71,8 +68,6 @@ ICEHOUSE_PACKAGES = [
 ]
 
 MITAKA_PACKAGES = [
-    'aodh-notifier',
-    'aodh-evaluator',
     'ceilometer-agent-notification'
 ]
 
@@ -130,10 +125,6 @@ def register_configs():
         or 'grizzly'
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
-
-    CONFIG_FILES[CEILOMETER_CONF]['services'] = (
-        CONFIG_FILES[CEILOMETER_CONF]['services'] +
-        ceilometer_release_services())
 
     for conf in CONFIG_FILES:
         configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
