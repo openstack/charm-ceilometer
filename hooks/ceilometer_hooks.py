@@ -22,12 +22,12 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.core.host import (
     service_restart,
-    restart_on_change,
     lsb_release
 )
 from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
     openstack_upgrade_available,
+    pausable_restart_on_change as restart_on_change,
 )
 from ceilometer_utils import (
     get_packages,

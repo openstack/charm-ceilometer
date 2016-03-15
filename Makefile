@@ -1,12 +1,16 @@
 #!/usr/bin/make
 PYTHON := /usr/bin/env python
 
+clean:
+	rm -rf .coverage .tox .testrepository trusty .unit-state.db
+	find . -iname '*.pyc' -delete
+
 lint:
 	@tox -e pep8
 
 test:
-	@echo Starting unit tests...
-	@tox -e py27
+	@# Bundletester expects unit tests here.
+	tox -e py27
 
 functional_test:
 	@echo Starting Amulet tests...

@@ -12,16 +12,18 @@ from ceilometer_contexts import (
     LoggingConfigContext,
     MongoDBContext,
     CeilometerContext,
-    HAProxyContext
+    HAProxyContext,
+    CEILOMETER_PORT,
 )
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
     get_os_codename_install_source,
     configure_installation_source,
-    set_os_workload_status,
+    pause_unit,
+    resume_unit,
+    make_assess_status_func,
 )
-from charmhelpers.core.hookenv import config, log, status_set
-from charmhelpers.core.unitdata import kv
+from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
 from copy import deepcopy
 
@@ -139,13 +141,13 @@ def register_configs():
 
 
 def restart_map():
-    '''
+    """
     Determine the correct resource map to be passed to
     charmhelpers.core.restart_on_change() based on the services configured.
 
     :returns: dict: A dictionary mapping config file to lists of services
                     that should be restarted when file changes.
-    '''
+    """
     _map = {}
     for f, ctxt in CONFIG_FILES.iteritems():
         svcs = []
@@ -161,15 +163,26 @@ def restart_map():
 
 
 def services():
-    ''' Returns a list of services associate with this charm '''
+    """ Returns a list of services associate with this charm """
     _services = []
     for v in restart_map().values():
         _services = _services + v
     return list(set(_services))
 
 
+def determine_ports():
+    """Assemble a list of API ports for services the charm is managing
+
+    @returns [ports] - list of ports that the charm manages.
+    """
+    # TODO(ajkavanagh) - determine what other ports the service listens on
+    # apart from the main CEILOMETER port
+    ports = [CEILOMETER_PORT]
+    return ports
+
+
 def get_ceilometer_context():
-    ''' Retrieve a map of all current relation data for agent configuration '''
+    """ Retrieve a map of all current relation data for agent configuration """
     ctxt = {}
     for hcontext in CONFIG_FILES[CEILOMETER_CONF]['hook_contexts']:
         ctxt.update(hcontext())
@@ -255,20 +268,70 @@ def set_shared_secret(secret):
         secret_file.write(secret)
 
 
-def is_paused():
-    '''Determine if current unit is in a paused state'''
-    db = kv()
-    if db.get('unit-paused'):
-        return True
-    else:
-        return False
-
-
 def assess_status(configs):
-    if is_paused():
-        status_set("maintenance",
-                   "Unit paused - use 'resume' action "
-                   "to resume normal service")
-        return
+    """Assess status of current unit
 
-    set_os_workload_status(configs, REQUIRED_INTERFACES)
+    Decides what the state of the unit should be based on the current
+    configuration.
+
+    SIDE EFFECT: calls set_os_workload_status(...) which sets the workload
+    status of the unit.
+    Also calls status_set(...) directly if paused state isn't complete.
+
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    assess_status_func(configs)()
+
+
+def assess_status_func(configs):
+    """Helper function to create the function that will assess_status() for
+    the unit.
+    Uses charmhelpers.contrib.openstack.utils.make_assess_status_func() to
+    create the appropriate status function and then returns it.
+    Used directly by assess_status() and also for pausing and resuming
+    the unit.
+
+    @param configs: a templating.OSConfigRenderer() object
+    @return f() -> None : a function that assesses the unit's workload status
+    """
+    return make_assess_status_func(
+        configs, REQUIRED_INTERFACES,
+        services=services(), ports=determine_ports())
+
+
+def pause_unit_helper(configs):
+    """Helper function to pause a unit, and then call assess_status(...) in
+    effect, so that the status is correctly updated.
+    Uses charmhelpers.contrib.openstack.utils.pause_unit() to do the work.
+
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    _pause_resume_helper(pause_unit, configs)
+
+
+def resume_unit_helper(configs):
+    """Helper function to resume a unit, and then call assess_status(...) in
+    effect, so that the status is correctly updated.
+    Uses charmhelpers.contrib.openstack.utils.resume_unit() to do the work.
+
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    _pause_resume_helper(resume_unit, configs)
+
+
+def _pause_resume_helper(f, configs):
+    """Helper function that uses the make_assess_status_func(...) from
+    charmhelpers.contrib.openstack.utils to create an assess_status(...)
+    function that can be used with the pause/resume of the unit
+
+    @param f: the function to be used with the assess_status(...) function
+    @returns None - this function is executed for its side-effect
+    """
+    # TODO(ajkavanagh) - ports= has been left off because of the race hazard
+    # that exists due to service_start()
+    f(assess_status_func(configs),
+      services=services(),
+      ports=determine_ports())
