@@ -1,12 +1,24 @@
-from mock import patch, MagicMock, call
 import os
+import sys
+
+from mock import patch, MagicMock, call
+
+# python-apt is not installed as part of test-requirements but is imported by
+# some charmhelpers modules so create a fake import.
+mock_apt = MagicMock()
+sys.modules['apt'] = mock_apt
+mock_apt.apt_pkg = MagicMock()
+
 
 import ceilometer_utils
 # Patch out register_configs for import of hooks
 _register_configs = ceilometer_utils.register_configs
 ceilometer_utils.register_configs = MagicMock()
 
-import ceilometer_hooks as hooks
+with patch('charmhelpers.contrib.hardening.harden.harden') as mock_dec:
+    mock_dec.side_effect = (lambda *dargs, **dkwargs: lambda f:
+                            lambda *args, **kwargs: f(*args, **kwargs))
+    import ceilometer_hooks as hooks
 
 # Renable old function
 ceilometer_utils.register_configs = _register_configs
@@ -55,7 +67,7 @@ class CeilometerHooksTest(CharmTestCase):
     @patch('charmhelpers.core.hookenv.config')
     def test_configure_source(self, mock_config, mock_execd_dir):
         self.test_config.set('openstack-origin', 'cloud:precise-havana')
-        hooks.hooks.execute(['hooks/install'])
+        hooks.hooks.execute(['hooks/install.real'])
         self.configure_installation_source.\
             assert_called_with('cloud:precise-havana')
 
@@ -63,7 +75,7 @@ class CeilometerHooksTest(CharmTestCase):
            return_value=os.path.join(os.getcwd(), 'exec.d'))
     @patch('charmhelpers.core.hookenv.config')
     def test_install_hook_precise(self, mock_config, mock_execd_dir):
-        hooks.hooks.execute(['hooks/install'])
+        hooks.hooks.execute(['hooks/install.real'])
         self.configure_installation_source.\
             assert_called_with('cloud:precise-grizzly')
         self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
@@ -78,7 +90,7 @@ class CeilometerHooksTest(CharmTestCase):
     @patch('charmhelpers.core.hookenv.config')
     def test_install_hook_distro(self, mock_config, mock_execd_dir):
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'saucy'}
-        hooks.hooks.execute(['hooks/install'])
+        hooks.hooks.execute(['hooks/install.real'])
         self.configure_installation_source.\
             assert_called_with('distro')
         self.open_port.assert_called_with(hooks.CEILOMETER_PORT)

@@ -62,12 +62,14 @@ from charmhelpers.contrib.peerstorage import (
     peer_store,
 )
 from charmhelpers.payload.execd import execd_preinstall
+from charmhelpers.contrib.hardening.harden import harden
 
 hooks = Hooks()
 CONFIGS = register_configs()
 
 
 @hooks.hook('install.real')
+@harden()
 def install():
     execd_preinstall()
     origin = config('openstack-origin')
@@ -143,6 +145,7 @@ def configure_https():
 
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
+@harden()
 def config_changed():
     if not config('action-managed-upgrade'):
         if openstack_upgrade_available('ceilometer-common'):
@@ -157,6 +160,7 @@ def config_changed():
 
 
 @hooks.hook('upgrade-charm')
+@harden()
 def upgrade_charm():
     install()
     update_nrpe_config()
@@ -335,6 +339,12 @@ def update_nrpe_config():
     nrpe.add_init_service_checks(nrpe_setup, services(), current_unit)
     nrpe.add_haproxy_checks(nrpe_setup, current_unit)
     nrpe_setup.write()
+
+
+@hooks.hook('update-status')
+@harden()
+def update_status():
+    log('Updating status.')
 
 
 if __name__ == '__main__':

@@ -12,3 +12,4 @@ include:
     - contrib.charmsupport
     - contrib.peerstorage
     - payload.execd
+    - contrib.hardening|inc=*

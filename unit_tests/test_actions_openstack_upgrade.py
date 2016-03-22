@@ -1,11 +1,22 @@
-from mock import patch
 import os
+import sys
+
+from mock import patch, MagicMock
+
+# python-apt is not installed as part of test-requirements but is imported by
+# some charmhelpers modules so create a fake import.
+mock_apt = MagicMock()
+sys.modules['apt'] = mock_apt
+mock_apt.apt_pkg = MagicMock()
 
 os.environ['JUJU_UNIT_NAME'] = 'ceilometer'
 
-with patch('ceilometer_utils.register_configs') as register_configs:
-    with patch('ceilometer_utils.ceilometer_release_services') as rel_services:
-        import openstack_upgrade
+with patch('charmhelpers.contrib.hardening.harden.harden') as mock_dec:
+    mock_dec.side_effect = (lambda *dargs, **dkwargs: lambda f:
+                            lambda *args, **kwargs: f(*args, **kwargs))
+    with patch('ceilometer_utils.register_configs') as register_configs:
+        with patch('ceilometer_utils.ceilometer_release_services'):
+            import openstack_upgrade
 
 from test_utils import (
     CharmTestCase
