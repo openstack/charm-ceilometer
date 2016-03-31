@@ -12,6 +12,10 @@ tags:
   - openstack
   - telemetry
   - misc
+extra-bindings:
+  public:
+  admin:
+  internal:
 provides:
   nrpe-external-master:
     interface: nrpe-external-master
