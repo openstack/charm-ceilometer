@@ -129,6 +129,8 @@ class CeilometerContextsTest(CharmTestCase):
             'port': 8777,
             'metering_secret': 'mysecret',
             'api_workers': 1,
+            'metering_time_to_live': -1,
+            'event_time_to_live': -1,
         })
 
     def test_ceilometer_service_context(self):

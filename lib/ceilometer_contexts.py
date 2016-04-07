@@ -92,9 +92,11 @@ class CeilometerContext(OSContextGenerator):
         from ceilometer_utils import get_shared_secret
 
         ctxt = {
-            'api_workers': config('api-workers'),
             'port': CEILOMETER_PORT,
-            'metering_secret': get_shared_secret()
+            'metering_secret': get_shared_secret(),
+            'api_workers': config('api-workers'),
+            'metering_time_to_live': config('metering-time-to-live'),
+            'event_time_to_live': config('event-time-to-live'),
         }
         return ctxt
 

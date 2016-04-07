@@ -7,6 +7,16 @@ options:
     default: False
     type: boolean
     description: Enable verbose logging.
+  metering-time-to-live:
+    type: int
+    default: -1
+    description: |
+      Number of seconds that samples are kept in the database for (<= 0 means forever)
+  event-time-to-live:
+    type: int
+    default: -1
+    description: |
+      Number of seconds that events are kept in the database for (<= 0 means forever)
   use-syslog:
     type: boolean
     default: False
