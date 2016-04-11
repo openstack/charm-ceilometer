@@ -2,8 +2,7 @@ import subprocess
 import amulet
 import json
 import time
-# from ceilometerclient.v2 import client as ceilclient
-import ceilometerclient.client
+import ceilometerclient.v2.client as ceilo_client
 
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
@@ -111,16 +110,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         ep = self.keystone.service_catalog.url_for(service_type='metering',
                                                    endpoint_type='publicURL')
         os_token = self.keystone.auth_token
-        # TODO(ajkavanagh) For v2 clients, this is what is really wanted, but
-        # won't work with trusty 1.0.8 client.  The following statement works
-        # with both, but is deprecated.  Remove once testing happens only on
-        # xenial.
-        # self.ceil = ceilometerclient.client.get_client(
-        #     '2', os_endpoint=ep, os_token=os_token)
-        # This call signature is (currently) compatible with 1.0.8 and 2.3.0 of
-        # python-ceilometerclient
-        self.ceil = ceilometerclient.client.get_client(
-            '2', ceilometer_url=ep, os_auth_token=lambda: os_token)
+        self.log.debug('Instantiating ceilometer client...')
+        self.ceil = ceilo_client.Client(endpoint=ep, token=os_token)
 
     def _run_action(self, unit_id, action, *args):
         command = ["juju", "action", "do", "--format=json", unit_id, action]
@@ -157,16 +148,15 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'ceilometer-agent-central',
             'ceilometer-collector',
             'ceilometer-api',
-            'ceilometer-alarm-evaluator',
-            'ceilometer-alarm-notifier',
             'ceilometer-agent-notification',
         ]
+
+        if self._get_openstack_release() < self.trusty_mitaka:
+            ceilometer_svcs.append('ceilometer-alarm-evaluator')
+            ceilometer_svcs.append('ceilometer-alarm-notifier')
+
         service_names = {
             self.ceil_sentry: ceilometer_svcs,
-            self.mysql_sentry: ['mysql'],
-            self.keystone_sentry: ['keystone'],
-            self.rabbitmq_sentry: ['rabbitmq-server'],
-            self.mongodb_sentry: ['mongodb'],
         }
 
         ret = u.validate_services_by_name(service_names)
@@ -451,6 +441,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             message = u.relation_error('ceilometer-service', ret)
             amulet.raise_status(amulet.FAIL, msg=message)
 
+        u.log.debug('OK')
+
     def test_210_ceilometer_agent_nova_compute_relation(self):
         """Verify the ceilometer to nova-compute relation data"""
         u.log.debug('Checking ceilometer:nova-compute relation data...')
@@ -479,8 +471,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         """Verify the data in the ceilometer config file."""
         u.log.debug('Checking ceilometer config file data...')
         unit = self.ceil_sentry
-        rmq_rel = self.rabbitmq_sentry.relation('amqp',
-                                                'ceilometer:amqp')
         ks_rel = self.keystone_sentry.relation('identity-service',
                                                'ceilometer:identity-service')
         auth_uri = '%s://%s:%s/' % (ks_rel['service_protocol'],
@@ -496,10 +486,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'verbose': 'False',
                 'debug': 'False',
                 'use_syslog': 'False',
-                'rabbit_userid': 'ceilometer',
-                'rabbit_virtual_host': 'openstack',
-                'rabbit_password': rmq_rel['password'],
-                'rabbit_host': rmq_rel['hostname'],
             },
             'api': {
                 'port': '8767',
@@ -512,15 +498,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             },
             'database': {
                 'connection': db_conn,
-            },
-            'keystone_authtoken': {
-                'auth_uri': auth_uri,
-                'auth_host': ks_rel['auth_host'],
-                'auth_port': ks_rel['auth_port'],
-                'auth_protocol': ks_rel['auth_protocol'],
-                'admin_tenant_name': 'services',
-                'admin_user': 'ceilometer',
-                'admin_password': ks_rel['service_password'],
             },
         }
 
@@ -543,22 +520,15 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'debug': 'False',
                 'use_syslog': 'False',
                 'my_ip': u.valid_ip,
-                'dhcpbridge_flagfile': '/etc/nova/nova.conf',
-                'dhcpbridge': '/usr/bin/nova-dhcpbridge',
-                'logdir': '/var/log/nova',
-                'state_path': '/var/lib/nova',
-                'api_paste_config': '/etc/nova/api-paste.ini',
-                'enabled_apis': 'ec2,osapi_compute,metadata',
-                'auth_strategy': 'keystone',
-                'instance_usage_audit': 'True',
-                'instance_usage_audit_period': 'hour',
-                'notify_on_state_change': 'vm_and_task_state',
             }
         }
 
         # NOTE(beisner): notification_driver is not checked like the
         # others, as configparser does not support duplicate config
         # options, and dicts cant have duplicate keys.
+        # Ex. from conf file:
+        #   notification_driver = ceilometer.compute.nova_notifier
+        #   notification_driver = nova.openstack.common.notifier.rpc_notifier
         for section, pairs in expected.iteritems():
             ret = u.validate_config_data(unit, conf, section, pairs)
             if ret:
@@ -632,10 +602,12 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         services = {
             'ceilometer-collector': conf_file,
             'ceilometer-api': conf_file,
-            'ceilometer-alarm-evaluator': conf_file,
-            'ceilometer-alarm-notifier': conf_file,
             'ceilometer-agent-notification': conf_file,
         }
+
+        if self._get_openstack_release() < self.trusty_mitaka:
+            services['ceilometer-alarm-notifier'] = conf_file
+            services['ceilometer-alarm-evaluator'] = conf_file
 
         if self._get_openstack_release() == self.trusty_liberty or \
                 self._get_openstack_release() >= self.wily_liberty:
