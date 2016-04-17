@@ -643,11 +643,19 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         u.log.debug('Checking pause and resume actions...')
         unit_name = "ceilometer/0"
         unit = self.d.sentry.unit[unit_name]
+        juju_service = 'ceilometer'
 
         assert u.status_get(unit)[0] == "active"
 
         action_id = self._run_action(unit_name, "pause")
         assert self._wait_on_action(action_id), "Pause action failed."
+        assert u.status_get(unit)[0] == "maintenance"
+
+        # trigger config-changed to ensure that services are still stopped
+        u.log.debug("Making config change on ceilometer ...")
+        self.d.configure(juju_service, {'debug': 'True'})
+        assert u.status_get(unit)[0] == "maintenance"
+        self.d.configure(juju_service, {'debug': 'False'})
         assert u.status_get(unit)[0] == "maintenance"
 
         action_id = self._run_action(unit_name, "resume")

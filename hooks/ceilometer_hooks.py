@@ -28,6 +28,7 @@ from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
     openstack_upgrade_available,
     pausable_restart_on_change as restart_on_change,
+    is_unit_paused_set,
 )
 from ceilometer_utils import (
     get_packages,
@@ -137,10 +138,11 @@ def configure_https():
 
     # TODO: improve this by checking if local CN certs are available
     # first then checking reload status (see LP #1433114).
-    try:
-        subprocess.check_call(['service', 'apache2', 'reload'])
-    except subprocess.CalledProcessError:
-        subprocess.call(['service', 'apache2', 'restart'])
+    if not is_unit_paused_set():
+        try:
+            subprocess.check_call(['service', 'apache2', 'reload'])
+        except subprocess.CalledProcessError:
+            subprocess.call(['service', 'apache2', 'restart'])
 
 
 @hooks.hook('config-changed')
