@@ -30,6 +30,9 @@ from charmhelpers.contrib.openstack.utils import (
     pausable_restart_on_change as restart_on_change,
     is_unit_paused_set,
 )
+from charmhelpers.contrib.openstack.ha.utils import (
+    update_dns_ha_resource_params,
+)
 from ceilometer_utils import (
     get_packages,
     CEILOMETER_DB,
@@ -205,7 +208,7 @@ def cluster_changed():
 
 
 @hooks.hook('ha-relation-joined')
-def ha_joined():
+def ha_joined(relation_id=None):
     cluster_config = get_hacluster_config()
 
     resources = {
@@ -229,26 +232,32 @@ def ha_joined():
                   (amqp_ssl_port))
         resource_params['res_ceilometer_agent_central'] = params
 
-    vip_group = []
-    for vip in cluster_config['vip'].split():
-        res_ceilometer_vip = 'ocf:heartbeat:IPaddr2'
-        vip_params = 'ip'
+    if config('dns-ha'):
+        update_dns_ha_resource_params(relation_id=relation_id,
+                                      resources=resources,
+                                      resource_params=resource_params)
+    else:
+        vip_group = []
+        for vip in cluster_config['vip'].split():
+            res_ceilometer_vip = 'ocf:heartbeat:IPaddr2'
+            vip_params = 'ip'
 
-        iface = get_iface_for_address(vip)
-        if iface is not None:
-            vip_key = 'res_ceilometer_{}_vip'.format(iface)
-            resources[vip_key] = res_ceilometer_vip
-            resource_params[vip_key] = (
-                'params {ip}="{vip}" cidr_netmask="{netmask}"'
-                ' nic="{iface}"'.format(ip=vip_params,
-                                        vip=vip,
-                                        iface=iface,
-                                        netmask=get_netmask_for_address(vip))
-            )
-            vip_group.append(vip_key)
+            iface = get_iface_for_address(vip)
+            if iface is not None:
+                vip_key = 'res_ceilometer_{}_vip'.format(iface)
+                resources[vip_key] = res_ceilometer_vip
+                resource_params[vip_key] = (
+                    'params {ip}="{vip}" cidr_netmask="{netmask}"'
+                    ' nic="{iface}"'
+                    ''.format(ip=vip_params,
+                              vip=vip,
+                              iface=iface,
+                              netmask=get_netmask_for_address(vip))
+                )
+                vip_group.append(vip_key)
 
-    if len(vip_group) >= 1:
-        relation_set(groups={'grp_ceilometer_vips': ' '.join(vip_group)})
+        if len(vip_group) >= 1:
+            relation_set(groups={'grp_ceilometer_vips': ' '.join(vip_group)})
 
     init_services = {
         'res_ceilometer_haproxy': 'haproxy'
@@ -256,7 +265,8 @@ def ha_joined():
     clones = {
         'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'
     }
-    relation_set(init_services=init_services,
+    relation_set(relation_id=relation_id,
+                 init_services=init_services,
                  corosync_bindiface=cluster_config['ha-bindiface'],
                  corosync_mcastport=cluster_config['ha-mcastport'],
                  resources=resources,

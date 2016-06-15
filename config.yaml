@@ -125,7 +125,37 @@ options:
       create the following public endpoints for ceilometer:
 
       https://ceilometer.example.com:8777/
+  os-internal-hostname:
+    type: string
+    default:
+    description: |
+      The hostname or address of the internal endpoints created for ceilometer
+      in the keystone identity provider.
+
+      This value will be used for internal endpoints. For example, an
+      os-internal-hostname set to 'ceilometer.internal.example.com' with ssl
+      enabled will create the following internal endpoints for ceilometer:
+
+      https://ceilometer.internal.example.com:8777/
+  os-admin-hostname:
+    type: string
+    default:
+    description: |
+      The hostname or address of the admin endpoints created for ceilometer
+      in the keystone identity provider.
+
+      This value will be used for admin endpoints. For example, an
+      os-admin-hostname set to 'ceilometer.admin.example.com' with ssl enabled
+      will create the following admin endpoints for ceilometer:
+
+      https://ceilometer.admin.example.com:8777/
   # HA configuration settings
+  dns-ha:
+    type: boolean
+    default: False
+    description: |
+        Use DNS HA with MAAS 2.0. Note if this is set do not set vip
+        settings below.
   vip:
     type: string
     default:
