@@ -102,13 +102,13 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
     def _initialize_tests(self):
         """Perform final initialization before tests get run."""
         # Access the sentries for inspecting service units
-        self.ceil_sentry = self.d.sentry.unit['ceilometer/0']
-        self.ceil_agent_sentry = self.d.sentry.unit['ceilometer-agent/0']
-        self.mysql_sentry = self.d.sentry.unit['mysql/0']
-        self.keystone_sentry = self.d.sentry.unit['keystone/0']
-        self.rabbitmq_sentry = self.d.sentry.unit['rabbitmq-server/0']
-        self.mongodb_sentry = self.d.sentry.unit['mongodb/0']
-        self.nova_sentry = self.d.sentry.unit['nova-compute/0']
+        self.ceil_sentry = self.d.sentry['ceilometer'][0]
+        self.ceil_agent_sentry = self.d.sentry['ceilometer-agent'][0]
+        self.mysql_sentry = self.d.sentry['mysql'][0]
+        self.keystone_sentry = self.d.sentry['keystone'][0]
+        self.rabbitmq_sentry = self.d.sentry['rabbitmq-server'][0]
+        self.mongodb_sentry = self.d.sentry['mongodb'][0]
+        self.nova_sentry = self.d.sentry['nova-compute'][0]
         u.log.debug('openstack release val: {}'.format(
             self._get_openstack_release()))
         u.log.debug('openstack release str: {}'.format(
@@ -655,8 +655,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
     def test_910_pause_and_resume(self):
         """The services can be paused and resumed. """
         u.log.debug('Checking pause and resume actions...')
-        unit_name = "ceilometer/0"
-        unit = self.d.sentry.unit[unit_name]
+        unit = self.ceil_sentry
+        unit_name = unit.info['unit_name']
         juju_service = 'ceilometer'
 
         assert u.status_get(unit)[0] == "active"

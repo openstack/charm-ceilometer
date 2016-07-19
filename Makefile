@@ -10,12 +10,11 @@ lint:
 
 test:
 	@# Bundletester expects unit tests here.
-	tox -e py27
+	@tox -e py27
 
 functional_test:
-	@echo Starting Amulet tests...
-	@tests/setup/00-setup
-	@juju test -v -p AMULET_HTTP_PROXY,AMULET_OS_VIP --timeout 2700
+	@echo Starting functional tests...
+	@tox -e func27
 
 bin/charm_helpers_sync.py:
 	@mkdir -p bin
