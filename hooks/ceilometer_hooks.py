@@ -43,6 +43,7 @@ from charmhelpers.core.host import (
 )
 from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
+    os_release,
     openstack_upgrade_available,
     pausable_restart_on_change as restart_on_change,
     is_unit_paused_set,
@@ -89,6 +90,10 @@ from charmhelpers.contrib.hardening.harden import harden
 
 hooks = Hooks()
 CONFIGS = register_configs()
+
+LEGACY_RES_KEY = 'res_ceilometer_agent_central'
+LEGACY_OCF_FILE = "/usr/lib/ocf/resource.d/openstack/ceilometer-agent-central"
+NEW_RES_KEY = 'res_ceilometer_polling'
 
 
 @hooks.hook('install.real')
@@ -189,6 +194,15 @@ def config_changed():
     for rid in relation_ids('identity-service'):
         keystone_joined(relid=rid)
 
+    # Install OCF resource file locally
+    install_ceilometer_ocf()
+
+    # Define the new ocf resource and use the key delete_resources to delete
+    # legacy resource for >= Liberty since the ceilometer-agent-central moved
+    # to ceilometer-polling in liberty (see LP: #1606787).
+    for rid in relation_ids('ha'):
+        ha_joined(rid)
+
 
 @hooks.hook('upgrade-charm')
 @harden()
@@ -199,13 +213,21 @@ def upgrade_charm():
 
 
 def install_ceilometer_ocf():
-    dest_file = "/usr/lib/ocf/resource.d/openstack/ceilometer-agent-central"
+    dest_file = LEGACY_OCF_FILE
     src_file = 'ocf/openstack/ceilometer-agent-central'
+
+    if os_release('ceilometer-common') >= 'liberty':
+        dest_file = "/usr/lib/ocf/resource.d/openstack/ceilometer-polling"
+        src_file = 'ocf/openstack/ceilometer-polling'
+        # delete ocf file due to package no longer exists after upgrade
+        if os.path.isfile(LEGACY_OCF_FILE):
+            os.remove(LEGACY_OCF_FILE)
 
     if not os.path.isdir(os.path.dirname(dest_file)):
         os.makedirs(os.path.dirname(dest_file))
     if not os.path.exists(dest_file):
         shutil.copy(src_file, dest_file)
+        os.chmod(dest_file, 0o755)
 
 
 @hooks.hook('cluster-relation-joined')
@@ -236,16 +258,22 @@ def cluster_changed():
 @hooks.hook('ha-relation-joined')
 def ha_joined(relation_id=None):
     cluster_config = get_hacluster_config()
+    delete_resources = []
 
+    RES_KEY = LEGACY_RES_KEY
+    if os_release('ceilometer-common') >= 'liberty':
+        RES_KEY = NEW_RES_KEY
+        delete_resources.append(LEGACY_RES_KEY)
+
+    ocf_name = RES_KEY.replace('res_', '').replace('_', '-')
     resources = {
         'res_ceilometer_haproxy': 'lsb:haproxy',
-        'res_ceilometer_agent_central': ('ocf:openstack:'
-                                         'ceilometer-agent-central')
+        RES_KEY: ('ocf:openstack:{}'.format(ocf_name))
     }
 
     resource_params = {
         'res_ceilometer_haproxy': 'op monitor interval="5s"',
-        'res_ceilometer_agent_central': 'op monitor interval="30s"'
+        RES_KEY: 'op monitor interval="30s"'
     }
 
     amqp_ssl_port = None
@@ -256,7 +284,7 @@ def ha_joined(relation_id=None):
     if amqp_ssl_port:
         params = ('params amqp_server_port="%s" op monitor interval="30s"' %
                   (amqp_ssl_port))
-        resource_params['res_ceilometer_agent_central'] = params
+        resource_params[RES_KEY] = params
 
     if config('dns-ha'):
         update_dns_ha_resource_params(relation_id=relation_id,
@@ -283,7 +311,9 @@ def ha_joined(relation_id=None):
                 vip_group.append(vip_key)
 
         if len(vip_group) >= 1:
-            relation_set(groups={'grp_ceilometer_vips': ' '.join(vip_group)})
+            relation_set(relation_id=relation_id,
+                         groups={'grp_ceilometer_vips':
+                                 ' '.join(vip_group)})
 
     init_services = {
         'res_ceilometer_haproxy': 'haproxy'
@@ -297,6 +327,7 @@ def ha_joined(relation_id=None):
                  corosync_mcastport=cluster_config['ha-mcastport'],
                  resources=resources,
                  resource_params=resource_params,
+                 delete_resources=delete_resources,
                  clones=clones)
 
 
