@@ -36,6 +36,7 @@ from charmhelpers.contrib.openstack.utils import (
     pause_unit,
     resume_unit,
     make_assess_status_func,
+    os_application_version_set,
 )
 from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
@@ -126,6 +127,8 @@ CONFIG_FILES = OrderedDict([
 TEMPLATES = 'templates'
 
 SHARED_SECRET = "/etc/ceilometer/secret.txt"
+
+VERSION_PACKAGE = 'ceilometer-common'
 
 
 def register_configs():
@@ -296,6 +299,7 @@ def assess_status(configs):
     @returns None - this function is executed for its side-effect
     """
     assess_status_func(configs)()
+    os_application_version_set(VERSION_PACKAGE)
 
 
 def assess_status_func(configs):

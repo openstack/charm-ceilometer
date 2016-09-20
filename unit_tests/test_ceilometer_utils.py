@@ -31,6 +31,7 @@ TO_PATCH = [
     'apt_install',
     'apt_update',
     'apt_upgrade',
+    'os_application_version_set',
 ]
 
 
@@ -157,6 +158,9 @@ class CeilometerUtilsTest(CharmTestCase):
             utils.assess_status('test-config')
             asf.assert_called_once_with('test-config')
             callee.assert_called_once_with()
+            self.os_application_version_set.assert_called_with(
+                utils.VERSION_PACKAGE
+            )
 
     @patch.object(utils, 'REQUIRED_INTERFACES')
     @patch.object(utils, 'services')
