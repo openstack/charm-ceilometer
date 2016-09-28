@@ -487,9 +487,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         unit = self.ceil_sentry
         ks_rel = self.keystone_sentry.relation('identity-service',
                                                'ceilometer:identity-service')
-        auth_uri = '%s://%s:%s/' % (ks_rel['service_protocol'],
-                                    ks_rel['service_host'],
-                                    ks_rel['service_port'])
         db_relation = self.mongodb_sentry.relation('database',
                                                    'ceilometer:shared-db')
         db_conn = 'mongodb://%s:%s/ceilometer' % (db_relation['hostname'],
@@ -504,16 +501,34 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'api': {
                 'port': '8767',
             },
-            'service_credentials': {
-                'os_auth_url': auth_uri + 'v2.0',
-                'os_tenant_name': 'services',
-                'os_username': 'ceilometer',
-                'os_password': ks_rel['service_password'],
-            },
             'database': {
                 'connection': db_conn,
             },
         }
+
+        if self._get_openstack_release() < self.trusty_mitaka:
+            auth_uri = '%s://%s:%s/v2.0' % (ks_rel['service_protocol'],
+                                            ks_rel['service_host'],
+                                            ks_rel['service_port'])
+            expected['service_credentials'] = {'os_auth_url': auth_uri,
+                                               'os_tenant_name': 'services',
+                                               'os_username': 'ceilometer',
+                                               'os_password':
+                                               ks_rel['service_password']}
+        else:
+            auth_uri = '%s://%s:%s' % (ks_rel['service_protocol'],
+                                       ks_rel['service_host'],
+                                       ks_rel['service_port'])
+            # NOTE(dosaboy): os_ prefix is deprecated and no longer used as
+            #                of Mitaka.
+            expected['service_credentials'] = {'auth_url': auth_uri,
+                                               'project_name': 'services',
+                                               'project_domain_name':
+                                               'default',
+                                               'user_domain_name': 'default',
+                                               'username': 'ceilometer',
+                                               'password':
+                                               ks_rel['service_password']}
 
         for section, pairs in expected.iteritems():
             ret = u.validate_config_data(unit, conf, section, pairs)
@@ -563,30 +578,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         ret = u.check_commands_on_units(cmds, sentry_units)
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
-
-        u.log.debug('OK')
-
-    def test_302_nova_ceilometer_config(self):
-        """Verify data in the ceilometer config file on the
-        nova-compute (ceilometer-agent) unit."""
-        u.log.debug('Checking nova ceilometer config file...')
-        unit = self.nova_sentry
-        conf = '/etc/ceilometer/ceilometer.conf'
-        expected = {
-            'DEFAULT': {
-                'logdir': '/var/log/ceilometer'
-            },
-            'database': {
-                'backend': 'sqlalchemy',
-                'connection': 'sqlite:////var/lib/ceilometer/$sqlite_db'
-            }
-        }
-
-        for section, pairs in expected.iteritems():
-            ret = u.validate_config_data(unit, conf, section, pairs)
-            if ret:
-                message = "ceilometer config error: {}".format(ret)
-                amulet.raise_status(amulet.FAIL, msg=message)
 
         u.log.debug('OK')
 
