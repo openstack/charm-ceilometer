@@ -37,7 +37,9 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.core.host import (
     service_restart,
-    lsb_release
+    lsb_release,
+    mkdir,
+    init_is_systemd,
 )
 from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
@@ -53,6 +55,7 @@ from ceilometer_utils import (
     CEILOMETER_DB,
     CEILOMETER_SERVICE,
     CEILOMETER_ROLE,
+    CEILOMETER_API_SYSTEMD_CONF,
     register_configs,
     restart_map,
     services,
@@ -61,6 +64,7 @@ from ceilometer_utils import (
     do_openstack_upgrade,
     set_shared_secret,
     assess_status,
+    reload_systemd,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -101,6 +105,10 @@ def install():
         apt_update(fatal=True)
         apt_install(packages, fatal=True)
     open_port(CEILOMETER_PORT)
+    if init_is_systemd():
+        # NOTE(jamespage): ensure systemd override folder exists prior to
+        #                  attempting to write override.conf
+        mkdir(os.path.dirname(CEILOMETER_API_SYSTEMD_CONF))
 
 
 @hooks.hook("amqp-relation-joined")
@@ -173,6 +181,9 @@ def config_changed():
             do_openstack_upgrade(CONFIGS)
     update_nrpe_config()
     CONFIGS.write_all()
+    # NOTE(jamespage): Drop when charm switches to apache2+mod_wsgi
+    #                  reload ensures port override is set correctly
+    reload_systemd()
     ceilometer_joined()
     configure_https()
     for rid in relation_ids('identity-service'):

@@ -63,6 +63,9 @@ TO_PATCH = [
     'configure_https',
     'status_set',
     'update_dns_ha_resource_params',
+    'reload_systemd',
+    'mkdir',
+    'init_is_systemd',
 ]
 
 
@@ -153,6 +156,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertFalse(self.do_openstack_upgrade.called)
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
+        self.assertTrue(self.reload_systemd.called)
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
@@ -164,6 +168,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.do_openstack_upgrade.called)
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
+        self.assertTrue(self.reload_systemd.called)
 
     def test_config_changed_with_openstack_upgrade_action(self):
         self.openstack_upgrade_available.return_value = True

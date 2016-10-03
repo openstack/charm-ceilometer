@@ -32,6 +32,8 @@ TO_PATCH = [
     'apt_update',
     'apt_upgrade',
     'os_application_version_set',
+    'init_is_systemd',
+    'os',
 ]
 
 
@@ -45,9 +47,34 @@ class CeilometerUtilsTest(CharmTestCase):
         super(CeilometerUtilsTest, self).tearDown()
 
     def test_register_configs(self):
+        self.os.path.exists.return_value = True
+        self.init_is_systemd.return_value = False
         configs = utils.register_configs()
         calls = []
-        for conf in utils.CONFIG_FILES:
+        for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
+                     utils.HTTPS_APACHE_24_CONF):
+            calls.append(call(conf,
+                              utils.CONFIG_FILES[conf]['hook_contexts']))
+        configs.register.assert_has_calls(calls, any_order=True)
+
+    def test_register_configs_apache22(self):
+        self.os.path.exists.return_value = False
+        self.init_is_systemd.return_value = False
+        configs = utils.register_configs()
+        calls = []
+        for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
+                     utils.HTTPS_APACHE_CONF):
+            calls.append(call(conf,
+                              utils.CONFIG_FILES[conf]['hook_contexts']))
+        configs.register.assert_has_calls(calls, any_order=True)
+
+    def test_register_configs_systemd(self):
+        self.os.path.exists.return_value = True
+        self.init_is_systemd.return_value = True
+        configs = utils.register_configs()
+        calls = []
+        for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
+                     utils.HTTPS_APACHE_24_CONF):
             calls.append(call(conf,
                               utils.CONFIG_FILES[conf]['hook_contexts']))
         configs.register.assert_has_calls(calls, any_order=True)
@@ -79,6 +106,8 @@ class CeilometerUtilsTest(CharmTestCase):
                 'ceilometer-alarm-notifier',
                 'ceilometer-alarm-evaluator',
                 'ceilometer-agent-notification'],
+             '/etc/systemd/system/ceilometer-api.service.d/override.conf': [
+                'ceilometer-api'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],
              "/etc/apache2/sites-available/openstack_https_frontend": [
                  'apache2'],
@@ -98,6 +127,8 @@ class CeilometerUtilsTest(CharmTestCase):
                 'ceilometer-collector',
                 'ceilometer-api',
                 'ceilometer-agent-notification'],
+             '/etc/systemd/system/ceilometer-api.service.d/override.conf': [
+                'ceilometer-api'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],
              "/etc/apache2/sites-available/openstack_https_frontend": [
                  'apache2'],

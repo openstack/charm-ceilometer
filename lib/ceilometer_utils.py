@@ -14,6 +14,7 @@
 
 import os
 import uuid
+import subprocess
 
 from collections import OrderedDict
 
@@ -40,11 +41,15 @@ from charmhelpers.contrib.openstack.utils import (
 )
 from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
+from charmhelpers.core.host import init_is_systemd
 from copy import deepcopy
 
 HAPROXY_CONF = '/etc/haproxy/haproxy.cfg'
 CEILOMETER_CONF_DIR = "/etc/ceilometer"
 CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
+CEILOMETER_API_SYSTEMD_CONF = (
+    '/etc/systemd/system/ceilometer-api.service.d/override.conf'
+)
 HTTPS_APACHE_CONF = "/etc/apache2/sites-available/openstack_https_frontend"
 HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
     "openstack_https_frontend.conf"
@@ -109,6 +114,10 @@ CONFIG_FILES = OrderedDict([
                           HAProxyContext()],
         'services': CEILOMETER_BASE_SERVICES
     }),
+    (CEILOMETER_API_SYSTEMD_CONF, {
+        'hook_contexts': [HAProxyContext()],
+        'services': ['ceilometer-api'],
+    }),
     (HAPROXY_CONF, {
         'hook_contexts': [context.HAProxyContext(singlenode_mode=True),
                           HAProxyContext()],
@@ -145,8 +154,14 @@ def register_configs():
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
 
-    for conf in CONFIG_FILES:
+    for conf in (CEILOMETER_CONF, HAPROXY_CONF):
         configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
+
+    if init_is_systemd():
+        configs.register(
+            CEILOMETER_API_SYSTEMD_CONF,
+            CONFIG_FILES[CEILOMETER_API_SYSTEMD_CONF]['hook_contexts']
+        )
 
     if os.path.exists('/etc/apache2/conf-available'):
         configs.register(HTTPS_APACHE_24_CONF,
@@ -353,3 +368,11 @@ def _pause_resume_helper(f, configs):
     f(assess_status_func(configs),
       services=services(),
       ports=determine_ports())
+
+
+# NOTE(jamespage): Drop once charm switches to apache+mod_wsgi.
+def reload_systemd():
+    """Reload systemd configuration on systemd based installs
+    """
+    if init_is_systemd():
+        subprocess.check_call(['systemctl', 'daemon-reload'])
