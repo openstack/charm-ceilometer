@@ -125,11 +125,14 @@ CONFIG_FILES = OrderedDict([
     }),
     (HTTPS_APACHE_CONF, {
         'hook_contexts': [ApacheSSLContext()],
-        'services': ['apache2'],
+        # Include ceilometer-api to fix Bug #1632287 This is a temporary
+        # tactival fix as the charm will be rewritten to use mod_wsgi next
+        # cycle
+        'services': ['ceilometer-api', 'apache2'],
     }),
     (HTTPS_APACHE_24_CONF, {
         'hook_contexts': [ApacheSSLContext()],
-        'services': ['apache2'],
+        'services': ['ceilometer-api', 'apache2'],
     })
 ])
 

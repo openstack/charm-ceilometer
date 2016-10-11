@@ -110,9 +110,9 @@ class CeilometerUtilsTest(CharmTestCase):
                 'ceilometer-api'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],
              "/etc/apache2/sites-available/openstack_https_frontend": [
-                 'apache2'],
+                 'ceilometer-api', 'apache2'],
              "/etc/apache2/sites-available/openstack_https_frontend.conf": [
-                 'apache2']
+                 'ceilometer-api', 'apache2']
              }
         )
 
@@ -131,9 +131,9 @@ class CeilometerUtilsTest(CharmTestCase):
                 'ceilometer-api'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],
              "/etc/apache2/sites-available/openstack_https_frontend": [
-                 'apache2'],
+                 'ceilometer-api', 'apache2'],
              "/etc/apache2/sites-available/openstack_https_frontend.conf": [
-                 'apache2']
+                 'ceilometer-api', 'apache2']
              }
         )
 
