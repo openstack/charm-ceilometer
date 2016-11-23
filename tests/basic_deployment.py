@@ -651,8 +651,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 services['ceilometer-alarm-notifier'] = conf_file
                 services['ceilometer-alarm-evaluator'] = conf_file
 
-            if self._get_openstack_release() == self.trusty_liberty or \
-                    self._get_openstack_release() >= self.trusty_mitaka:
+            if self._get_openstack_release() >= self.trusty_liberty:
                 # Liberty and later
                 services['ceilometer-polling'] = conf_file
             else:
