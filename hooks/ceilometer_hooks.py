@@ -52,6 +52,7 @@ from charmhelpers.contrib.openstack.ha.utils import (
     update_dns_ha_resource_params,
 )
 from ceilometer_utils import (
+    disable_package_apache_site,
     get_packages,
     CEILOMETER_DB,
     CEILOMETER_SERVICE,
@@ -59,6 +60,7 @@ from ceilometer_utils import (
     CEILOMETER_API_SYSTEMD_CONF,
     register_configs,
     restart_map,
+    run_in_apache,
     services,
     get_ceilometer_context,
     get_shared_secret,
@@ -114,6 +116,8 @@ def install():
         # NOTE(jamespage): ensure systemd override folder exists prior to
         #                  attempting to write override.conf
         mkdir(os.path.dirname(CEILOMETER_API_SYSTEMD_CONF))
+    if run_in_apache():
+        disable_package_apache_site()
 
 
 @hooks.hook("amqp-relation-joined")

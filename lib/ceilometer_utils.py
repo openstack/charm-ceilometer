@@ -34,6 +34,7 @@ from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
     get_os_codename_install_source,
     configure_installation_source,
+    os_release,
     pause_unit,
     resume_unit,
     make_assess_status_func,
@@ -104,6 +105,8 @@ REQUIRED_INTERFACES = {
 
 CEILOMETER_ROLE = "ResellerAdmin"
 SVC = 'ceilometer'
+WSGI_CEILOMETER_API_CONF = '/etc/apache2/sites-enabled/wsgi-openstack-api.conf'
+PACKAGE_CEILOMETER_API_CONF = '/etc/apache2/sites-enabled/ceilometer-api.conf'
 
 CONFIG_FILES = OrderedDict([
     (CEILOMETER_CONF, {
@@ -178,6 +181,14 @@ def register_configs():
                          CONFIG_FILES[HTTPS_APACHE_CONF]['hook_contexts'])
     if enable_memcache(release=release):
         configs.register(MEMCACHED_CONF, [context.MemcacheContext()])
+
+    if run_in_apache():
+        wsgi_script = "/usr/share/ceilometer/app.wsgi"
+        configs.register(WSGI_CEILOMETER_API_CONF,
+                         [context.WSGIWorkerConfigContext(name="ceilometer",
+                                                          script=wsgi_script),
+                          CeilometerContext(),
+                          HAProxyContext()])
     return configs
 
 
@@ -202,6 +213,15 @@ def restart_map():
 
     if enable_memcache(source=config('openstack-origin')):
         _map[MEMCACHED_CONF] = ['memcached']
+
+    if run_in_apache():
+        for cfile in _map:
+            svcs = _map[cfile]
+            if 'ceilometer-api' in svcs:
+                svcs.remove('ceilometer-api')
+                if 'apache2' not in svcs:
+                    svcs.append('apache2')
+        _map['WSGI_CEILOMETER_API_CONF'] = ['apache2']
 
     return _map
 
@@ -259,6 +279,9 @@ def do_openstack_upgrade(configs):
 
     # set CONFIGS to load templates from new release
     configs.set_release(openstack_release=new_os_rel)
+
+    if run_in_apache():
+        disable_package_apache_site()
 
 
 def ceilometer_release_services():
@@ -389,3 +412,18 @@ def reload_systemd():
     """
     if init_is_systemd():
         subprocess.check_call(['systemctl', 'daemon-reload'])
+
+
+def run_in_apache():
+    """Return true if ceilometer API is run under apache2 with mod_wsgi in
+    this release.
+    """
+    return os_release('ceilometer-common') >= 'ocata'
+
+
+def disable_package_apache_site():
+    """Ensure that the package-provided apache configuration is disabled to
+    prevent it from conflicting with the charm-provided version.
+    """
+    if os.path.exists(PACKAGE_CEILOMETER_API_CONF):
+        subprocess.check_call(['a2dissite', 'ceilometer-api'])

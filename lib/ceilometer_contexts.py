@@ -46,7 +46,7 @@ class MongoDBContext(OSContextGenerator):
     def __call__(self):
         mongo_servers = []
         replset = None
-        use_replset = os_release('ceilometer-api') >= 'icehouse'
+        use_replset = os_release('ceilometer-common') >= 'icehouse'
 
         for relid in relation_ids('shared-db'):
             rel_units = related_units(relid)
