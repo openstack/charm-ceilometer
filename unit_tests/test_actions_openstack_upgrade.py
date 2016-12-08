@@ -29,7 +29,7 @@ with patch('charmhelpers.contrib.hardening.harden.harden') as mock_dec:
     mock_dec.side_effect = (lambda *dargs, **dkwargs: lambda f:
                             lambda *args, **kwargs: f(*args, **kwargs))
     with patch('ceilometer_utils.register_configs') as register_configs:
-        with patch('ceilometer_utils.ceilometer_release_services'):
+        with patch('ceilometer_utils.restart_map') as restart_map:
             import openstack_upgrade
 
 from test_utils import (

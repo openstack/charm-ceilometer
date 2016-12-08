@@ -38,6 +38,8 @@ from charmhelpers.contrib.openstack.utils import (
     resume_unit,
     make_assess_status_func,
     os_application_version_set,
+    token_cache_pkgs,
+    enable_memcache,
 )
 from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
@@ -54,6 +56,7 @@ HTTPS_APACHE_CONF = "/etc/apache2/sites-available/openstack_https_frontend"
 HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
     "openstack_https_frontend.conf"
 CLUSTER_RES = 'grp_ceilometer_vips'
+MEMCACHED_CONF = '/etc/memcached.conf'
 
 CEILOMETER_BASE_SERVICES = [
     'ceilometer-agent-central',
@@ -111,7 +114,8 @@ CONFIG_FILES = OrderedDict([
                           MongoDBContext(),
                           CeilometerContext(),
                           context.SyslogContext(),
-                          HAProxyContext()],
+                          HAProxyContext(),
+                          context.MemcacheContext()],
         'services': CEILOMETER_BASE_SERVICES
     }),
     (CEILOMETER_API_SYSTEMD_CONF, {
@@ -133,7 +137,7 @@ CONFIG_FILES = OrderedDict([
     (HTTPS_APACHE_24_CONF, {
         'hook_contexts': [ApacheSSLContext()],
         'services': ['ceilometer-api', 'apache2'],
-    })
+    }),
 ])
 
 TEMPLATES = 'templates'
@@ -172,6 +176,8 @@ def register_configs():
     else:
         configs.register(HTTPS_APACHE_CONF,
                          CONFIG_FILES[HTTPS_APACHE_CONF]['hook_contexts'])
+    if enable_memcache(release=release):
+        configs.register(MEMCACHED_CONF, [context.MemcacheContext()])
     return configs
 
 
@@ -193,6 +199,9 @@ def restart_map():
                 svcs.append(svc)
         if svcs:
             _map[f] = svcs
+
+    if enable_memcache(source=config('openstack-origin')):
+        _map[MEMCACHED_CONF] = ['memcached']
 
     return _map
 
@@ -275,6 +284,7 @@ def ceilometer_release_packages():
 def get_packages():
     packages = (deepcopy(CEILOMETER_BASE_PACKAGES) +
                 ceilometer_release_packages())
+    packages.extend(token_cache_pkgs(source=config('openstack-origin')))
     return packages
 
 

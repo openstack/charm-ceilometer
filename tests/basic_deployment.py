@@ -191,6 +191,12 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
         u.log.debug('OK')
 
+    def test_105_memcache(self):
+        u.validate_memcache(self.ceil_sentry,
+                            '/etc/ceilometer/ceilometer.conf',
+                            self._get_openstack_release(),
+                            earliest_release=self.trusty_mitaka)
+
     def test_110_service_catalog(self):
         """Verify that the service catalog endpoint data is valid."""
         u.log.debug('Checking keystone service catalog data...')

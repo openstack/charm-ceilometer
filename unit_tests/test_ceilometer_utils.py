@@ -34,6 +34,8 @@ TO_PATCH = [
     'os_application_version_set',
     'init_is_systemd',
     'os',
+    'enable_memcache',
+    'token_cache_pkgs',
 ]
 
 
@@ -109,6 +111,7 @@ class CeilometerUtilsTest(CharmTestCase):
              '/etc/systemd/system/ceilometer-api.service.d/override.conf': [
                 'ceilometer-api'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],
+             '/etc/memcached.conf': ['memcached'],
              "/etc/apache2/sites-available/openstack_https_frontend": [
                  'ceilometer-api', 'apache2'],
              "/etc/apache2/sites-available/openstack_https_frontend.conf": [
@@ -119,6 +122,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_restart_map_mitaka(self):
         """Ensure that alarming services are missing for OpenStack Mitaka"""
         self.get_os_codename_install_source.return_value = 'mitaka'
+        self.maxDiff = None
         restart_map = utils.restart_map()
         self.assertEquals(
             restart_map,
@@ -130,6 +134,7 @@ class CeilometerUtilsTest(CharmTestCase):
              '/etc/systemd/system/ceilometer-api.service.d/override.conf': [
                 'ceilometer-api'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],
+             '/etc/memcached.conf': ['memcached'],
              "/etc/apache2/sites-available/openstack_https_frontend": [
                  'ceilometer-api', 'apache2'],
              "/etc/apache2/sites-available/openstack_https_frontend.conf": [
@@ -153,6 +158,7 @@ class CeilometerUtilsTest(CharmTestCase):
         self.config.side_effect = self.test_config.get
         self.test_config.set('openstack-origin', 'cloud:trusty-kilo')
         self.get_os_codename_install_source.return_value = 'kilo'
+        self.enable_memcache.return_value = False
         configs = MagicMock()
         utils.do_openstack_upgrade(configs)
         configs.set_release.assert_called_with(openstack_release='kilo')
@@ -172,15 +178,18 @@ class CeilometerUtilsTest(CharmTestCase):
 
     def test_get_packages_icehouse(self):
         self.get_os_codename_install_source.return_value = 'icehouse'
+        self.token_cache_pkgs.return_value = []
         self.assertEqual(utils.get_packages(),
                          utils.CEILOMETER_BASE_PACKAGES +
                          utils.ICEHOUSE_PACKAGES)
 
     def test_get_packages_mitaka(self):
         self.get_os_codename_install_source.return_value = 'mitaka'
+        self.token_cache_pkgs.return_value = ['memcached']
         self.assertEqual(utils.get_packages(),
                          utils.CEILOMETER_BASE_PACKAGES +
-                         utils.MITAKA_PACKAGES)
+                         utils.MITAKA_PACKAGES +
+                         ['memcached'])
 
     def test_assess_status(self):
         with patch.object(utils, 'assess_status_func') as asf:
