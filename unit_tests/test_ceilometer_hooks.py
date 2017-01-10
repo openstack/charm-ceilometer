@@ -147,44 +147,51 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(changed.called)
         self.assertTrue(install.called)
 
+    @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     @patch.object(hooks, 'install_ceilometer_ocf')
     def test_config_changed_no_upgrade(self, ocf,
-                                       joined, mock_config):
+                                       joined, mock_config, event_pipe):
         self.openstack_upgrade_available.return_value = False
         hooks.hooks.execute(['hooks/config-changed'])
         self.openstack_upgrade_available.\
             assert_called_with('ceilometer-common')
         self.assertFalse(self.do_openstack_upgrade.called)
+        self.assertTrue(event_pipe.called)
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
         self.assertTrue(ocf.called)
 
+    @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     @patch.object(hooks, 'install_ceilometer_ocf')
     def test_config_changed_upgrade(self, ocf,
-                                    joined, mock_config):
+                                    joined, mock_config, event_pipe):
         self.openstack_upgrade_available.return_value = True
         hooks.hooks.execute(['hooks/config-changed'])
         self.openstack_upgrade_available.\
             assert_called_with('ceilometer-common')
         self.assertTrue(self.do_openstack_upgrade.called)
+        self.assertTrue(event_pipe.called)
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
         self.assertTrue(ocf.called)
 
+    @patch.object(hooks, 'install_event_pipeline_setting')
     @patch.object(hooks, 'install_ceilometer_ocf')
-    def test_config_changed_with_openstack_upgrade_action(self, ocf):
+    def test_config_changed_with_openstack_upgrade_action(self, ocf,
+                                                          event_pipe):
         self.openstack_upgrade_available.return_value = True
         self.test_config.set('action-managed-upgrade', True)
 
         hooks.hooks.execute(['hooks/config-changed'])
 
         self.assertFalse(self.do_openstack_upgrade.called)
+        self.assertTrue(event_pipe.called)
         self.assertTrue(ocf.called)
 
     @patch.object(hooks, 'canonical_url')
