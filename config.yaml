@@ -47,10 +47,6 @@ options:
 
       NOTE: updating this setting to a source that is known to provide
       a later version of OpenStack will trigger a software upgrade.
-
-      NOTE: when openstack-origin-git is specified, openstack specific
-      packages will be installed from source rather than from the
-      openstack-origin repository.
   region:
     default: RegionOne
     type: string

@@ -36,6 +36,7 @@ TO_PATCH = [
     'os',
     'enable_memcache',
     'token_cache_pkgs',
+    'os_release',
 ]
 
 

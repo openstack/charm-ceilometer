@@ -64,6 +64,7 @@ TO_PATCH = [
     'status_set',
     'update_dns_ha_resource_params',
     'reload_systemd',
+    'run_in_apache',
     'mkdir',
     'init_is_systemd',
     'os_release',

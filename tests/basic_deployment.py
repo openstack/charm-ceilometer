@@ -173,9 +173,12 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         ceilometer_svcs = [
             'ceilometer-agent-central',
             'ceilometer-collector',
-            'ceilometer-api',
             'ceilometer-agent-notification',
         ]
+        if self._get_openstack_release() >= self.xenial_ocata:
+            ceilometer_svcs.append('apache2')
+        else:
+            ceilometer_svcs.append('ceilometer-api')
 
         if self._get_openstack_release() < self.trusty_mitaka:
             ceilometer_svcs.append('ceilometer-alarm-evaluator')
@@ -641,11 +644,14 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         if self._get_openstack_release() >= self.xenial_newton:
             services = {
                 'ceilometer-collector - CollectorService(0)': conf_file,
-                'ceilometer-api': conf_file,
                 'ceilometer-polling - AgentManager(0)': conf_file,
                 'ceilometer-agent-notification - NotificationService(0)':
                     conf_file,
             }
+            if self._get_openstack_release() >= self.xenial_ocata:
+                services['apache2'] = conf_file
+            else:
+                services['ceilometer-api'] = conf_file
         else:
             services = {
                 'ceilometer-collector': conf_file,
