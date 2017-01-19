@@ -4,9 +4,14 @@
 
 declare -a DEPS=('apt' 'netaddr' 'netifaces' 'pip' 'yaml')
 
+wait_for_dpkg_unlock() {
+    while $(fuser -s /var/lib/dpkg/lock); do sleep .5;done
+}
+
 check_and_install() {
     pkg="${1}-${2}"
     if ! dpkg -s ${pkg} 2>&1 > /dev/null; then
+        wait_for_dpkg_unlock
         apt-get -y install ${pkg}
     fi
 }
