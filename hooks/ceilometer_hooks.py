@@ -226,6 +226,8 @@ def upgrade_charm():
 
 
 def install_ceilometer_ocf():
+    # TODO Move away from using the OCF resource for openstack service
+    # management.
     dest_file = LEGACY_OCF_FILE
     src_file = 'ocf/openstack/ceilometer-agent-central'
 

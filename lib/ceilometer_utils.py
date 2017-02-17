@@ -231,7 +231,13 @@ def services():
     _services = []
     for v in restart_map().values():
         _services = _services + v
-    return list(set(_services))
+    _services = set(_services)
+    # Bug#1664898 Remove check for ceilometer-agent-central
+    # service.
+    codename = get_os_codename_install_source(config('openstack-origin'))
+    if codename >= 'liberty' and 'ceilometer-agent-central' in _services:
+        _services.remove('ceilometer-agent-central')
+    return list(_services)
 
 
 def determine_ports():
