@@ -148,6 +148,15 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(changed.called)
         self.assertTrue(install.called)
 
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'cluster_joined')
+    def test_upgrade_charm_with_cluster(self, cluster_joined, mock_config):
+        self.relation_ids.return_value = ['ceilometer/0',
+                                          'ceilometer/1',
+                                          'ceilometer/2']
+        hooks.hooks.execute(['hooks/upgrade-charm'])
+        self.assertEquals(cluster_joined.call_count, 3)
+
     @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
@@ -279,6 +288,31 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.peer_store.called)
         self.peer_store.assert_called_with('shared_secret', 'secret')
         self.assertTrue(self.CONFIGS.write_all.called)
+
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'get_address_in_network')
+    @patch.object(hooks, 'install_ceilometer_ocf')
+    @patch.object(hooks, 'is_elected_leader')
+    def test_cluster_joined_os_networks(self, mock_leader, mock_install_ocf,
+                                        get_addr, mock_config):
+        mock_leader.return_value = False
+        get_addr.return_value = '10.0.0.100'
+        rel_settings = {'int-address': '10.0.0.100'}
+        hooks.hooks.execute(['hooks/cluster-relation-joined'])
+        self.relation_set.assert_called_with(relation_id=None,
+                                             relation_settings=rel_settings)
+
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'get_address_in_network')
+    @patch.object(hooks, 'install_ceilometer_ocf')
+    @patch.object(hooks, 'is_elected_leader')
+    def test_cluster_joined_no_os_networks(self, mock_leader,
+                                           mock_install_ocf,
+                                           get_addr, mock_config):
+        mock_leader.return_value = False
+        get_addr.return_value = None
+        hooks.hooks.execute(['hooks/cluster-relation-joined'])
+        self.assertEquals(self.relation_set.call_count, 0)
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'set_shared_secret')

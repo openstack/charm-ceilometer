@@ -77,7 +77,8 @@ from charmhelpers.contrib.openstack.ip import (
 from charmhelpers.contrib.charmsupport import nrpe
 from charmhelpers.contrib.network.ip import (
     get_iface_for_address,
-    get_netmask_for_address
+    get_netmask_for_address,
+    get_address_in_network
 )
 from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
@@ -223,6 +224,8 @@ def upgrade_charm():
     install()
     update_nrpe_config()
     any_changed()
+    for rid in relation_ids('cluster'):
+        cluster_joined(relation_id=rid)
 
 
 def install_ceilometer_ocf():
@@ -247,7 +250,7 @@ def install_ceilometer_ocf():
 
 @hooks.hook('cluster-relation-joined')
 @restart_on_change(restart_map(), stopstart=True)
-def cluster_joined():
+def cluster_joined(relation_id=None):
     install_ceilometer_ocf()
 
     # If this node is the elected leader then share our secret with other nodes
@@ -255,6 +258,15 @@ def cluster_joined():
         peer_store('shared_secret', get_shared_secret())
 
     CONFIGS.write_all()
+    for addr_type in [ADMIN, PUBLIC, INTERNAL]:
+        address = get_address_in_network(
+            config('os-{}-network'.format(addr_type))
+        )
+        if address:
+            relation_set(
+                relation_id=relation_id,
+                relation_settings={'{}-address'.format(addr_type): address}
+            )
 
 
 @hooks.hook('cluster-relation-changed',
