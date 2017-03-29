@@ -41,6 +41,7 @@ from charmhelpers.contrib.openstack.utils import (
     os_application_version_set,
     token_cache_pkgs,
     enable_memcache,
+    CompareOpenStackReleases,
 )
 from charmhelpers.core.hookenv import config, log
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
@@ -159,8 +160,8 @@ def register_configs():
     # if called without anything installed (eg during install hook)
     # just default to earliest supported release. configs dont get touched
     # till post-install, anyway.
-    release = get_os_codename_package('ceilometer-common', fatal=False) \
-        or 'grizzly'
+    release = (get_os_codename_package('ceilometer-common', fatal=False) or
+               'grizzly')
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
 
@@ -234,8 +235,9 @@ def services():
     _services = set(_services)
     # Bug#1664898 Remove check for ceilometer-agent-central
     # service.
-    codename = get_os_codename_install_source(config('openstack-origin'))
-    if codename >= 'liberty' and 'ceilometer-agent-central' in _services:
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'liberty' and 'ceilometer-agent-central' in _services:
         _services.remove('ceilometer-agent-central')
     return list(_services)
 
@@ -291,20 +293,22 @@ def do_openstack_upgrade(configs):
 
 
 def ceilometer_release_services():
-    codename = get_os_codename_install_source(config('openstack-origin'))
-    if codename >= 'mitaka':
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'mitaka':
         return MITAKA_SERVICES
-    elif codename >= 'icehouse':
+    elif cmp_codename >= 'icehouse':
         return ICEHOUSE_SERVICES
     else:
         return []
 
 
 def ceilometer_release_packages():
-    codename = get_os_codename_install_source(config('openstack-origin'))
-    if codename >= 'mitaka':
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'mitaka':
         return MITAKA_PACKAGES
-    elif codename >= 'icehouse':
+    elif cmp_codename >= 'icehouse':
         return ICEHOUSE_PACKAGES
     else:
         return []
@@ -424,7 +428,7 @@ def run_in_apache():
     """Return true if ceilometer API is run under apache2 with mod_wsgi in
     this release.
     """
-    return os_release('ceilometer-common') >= 'ocata'
+    return CompareOpenStackReleases(os_release('ceilometer-common')) >= 'ocata'
 
 
 def disable_package_apache_site():

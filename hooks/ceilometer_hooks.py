@@ -47,6 +47,7 @@ from charmhelpers.contrib.openstack.utils import (
     openstack_upgrade_available,
     pausable_restart_on_change as restart_on_change,
     is_unit_paused_set,
+    CompareOpenStackReleases,
 )
 from charmhelpers.contrib.openstack.ha.utils import (
     update_dns_ha_resource_params,
@@ -234,7 +235,7 @@ def install_ceilometer_ocf():
     dest_file = LEGACY_OCF_FILE
     src_file = 'ocf/openstack/ceilometer-agent-central'
 
-    if os_release('ceilometer-common') >= 'liberty':
+    if CompareOpenStackReleases(os_release('ceilometer-common')) >= 'liberty':
         dest_file = "/usr/lib/ocf/resource.d/openstack/ceilometer-polling"
         src_file = 'ocf/openstack/ceilometer-polling'
         # delete ocf file due to package no longer exists after upgrade
@@ -288,7 +289,7 @@ def ha_joined(relation_id=None):
     delete_resources = []
 
     RES_KEY = LEGACY_RES_KEY
-    if os_release('ceilometer-common') >= 'liberty':
+    if CompareOpenStackReleases(os_release('ceilometer-common')) >= 'liberty':
         RES_KEY = NEW_RES_KEY
         delete_resources.append(LEGACY_RES_KEY)
 

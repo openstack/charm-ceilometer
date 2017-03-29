@@ -19,7 +19,10 @@ from charmhelpers.core.hookenv import (
     config
 )
 
-from charmhelpers.contrib.openstack.utils import os_release
+from charmhelpers.contrib.openstack.utils import (
+    os_release,
+    CompareOpenStackReleases,
+)
 
 from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
@@ -46,7 +49,8 @@ class MongoDBContext(OSContextGenerator):
     def __call__(self):
         mongo_servers = []
         replset = None
-        use_replset = os_release('ceilometer-common') >= 'icehouse'
+        _release = os_release('ceilometer-common')
+        use_replset = CompareOpenStackReleases(_release) >= 'icehouse'
 
         for relid in relation_ids('shared-db'):
             rel_units = related_units(relid)

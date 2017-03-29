@@ -52,6 +52,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_register_configs(self):
         self.os.path.exists.return_value = True
         self.init_is_systemd.return_value = False
+        self.os_release.return_value = 'havana'
         configs = utils.register_configs()
         calls = []
         for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
@@ -63,6 +64,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_register_configs_apache22(self):
         self.os.path.exists.return_value = False
         self.init_is_systemd.return_value = False
+        self.os_release.return_value = 'havana'
         configs = utils.register_configs()
         calls = []
         for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
@@ -74,6 +76,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_register_configs_systemd(self):
         self.os.path.exists.return_value = True
         self.init_is_systemd.return_value = True
+        self.os_release.return_value = 'havana'
         configs = utils.register_configs()
         calls = []
         for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
@@ -99,6 +102,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_restart_map(self):
         """Ensure that alarming services are present for < OpenStack Mitaka"""
         self.get_os_codename_install_source.return_value = 'icehouse'
+        self.os_release.return_value = 'icehouse'
         restart_map = utils.restart_map()
         self.assertEquals(
             restart_map,
@@ -123,6 +127,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_restart_map_mitaka(self):
         """Ensure that alarming services are missing for OpenStack Mitaka"""
         self.get_os_codename_install_source.return_value = 'mitaka'
+        self.os_release.return_value = 'mitaka'
         self.maxDiff = None
         restart_map = utils.restart_map()
         self.assertEquals(
@@ -159,6 +164,7 @@ class CeilometerUtilsTest(CharmTestCase):
         self.config.side_effect = self.test_config.get
         self.test_config.set('openstack-origin', 'cloud:trusty-kilo')
         self.get_os_codename_install_source.return_value = 'kilo'
+        self.os_release.return_value = 'kilo'
         self.enable_memcache.return_value = False
         configs = MagicMock()
         utils.do_openstack_upgrade(configs)

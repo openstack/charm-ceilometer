@@ -65,6 +65,7 @@ class CeilometerContextsTest(CharmTestCase):
             'port': 8090
         }
         self.test_relation.set(data)
+        self.os_release.return_value = 'havana'
         self.assertEquals(contexts.MongoDBContext()(),
                           {'db_host': 'mongodb', 'db_port': 8090,
                            'db_name': 'ceilometer'})
