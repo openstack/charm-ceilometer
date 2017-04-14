@@ -91,12 +91,17 @@ class CeilometerContext(OSContextGenerator):
         # Lazy-import to avoid a circular dependency in the imports
         from ceilometer_utils import get_shared_secret
 
+        # Make sure to cast the time-to-live events to integer values.
+        # For large enough numbers, Juju returns the value in scientific
+        # notation which causes python to treat the number as a float
+        # value, which in turn causes ceilometer to fail to start.
+        # See LP#1651645 for more details.
         ctxt = {
             'port': CEILOMETER_PORT,
             'metering_secret': get_shared_secret(),
             'api_workers': config('api-workers'),
-            'metering_time_to_live': config('metering-time-to-live'),
-            'event_time_to_live': config('event-time-to-live'),
+            'metering_time_to_live': int(config('metering-time-to-live')),
+            'event_time_to_live': int(config('event-time-to-live')),
         }
         return ctxt
 
