@@ -58,12 +58,15 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
            and the rest of the service are from lp branches that are
            compatible with the local charm (e.g. stable or next).
            """
+        # Note: Revert back to cs:mongodb when it supports current UCA pockets
+        #       https://bugs.launchpad.net/charm-ceilometer/+bug/1671865
         this_service = {'name': 'ceilometer'}
         other_services = [
             {'name': 'percona-cluster', 'constraints': {'mem': '3072M'}},
             {'name': 'rabbitmq-server'},
             {'name': 'keystone'},
-            {'name': 'mongodb'},
+            {'name': 'mongodb',
+             'location': 'cs:~1chb1n/{}/mongodb'.format(self.series)},
             {'name': 'glance'},  # to satisfy workload status
             {'name': 'ceilometer-agent'},
             {'name': 'nova-compute'}
@@ -641,17 +644,22 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         # Services which are expected to restart upon config change,
         # and corresponding config files affected by the change
         conf_file = '/etc/ceilometer/ceilometer.conf'
-        if self._get_openstack_release() >= self.xenial_newton:
+        if self._get_openstack_release() >= self.xenial_ocata:
+            services = {
+                'ceilometer-collector: CollectorService worker(0)': conf_file,
+                'ceilometer-polling: AgentManager worker(0)': conf_file,
+                'ceilometer-agent-notification: NotificationService worker(0)':
+                    conf_file,
+                'apache2': conf_file,
+            }
+        elif self._get_openstack_release() >= self.xenial_newton:
             services = {
                 'ceilometer-collector - CollectorService(0)': conf_file,
                 'ceilometer-polling - AgentManager(0)': conf_file,
                 'ceilometer-agent-notification - NotificationService(0)':
                     conf_file,
+                'ceilometer-api': conf_file,
             }
-            if self._get_openstack_release() >= self.xenial_ocata:
-                services['apache2'] = conf_file
-            else:
-                services['ceilometer-api'] = conf_file
         else:
             services = {
                 'ceilometer-collector': conf_file,
@@ -695,13 +703,12 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         """The services can be paused and resumed. """
         u.log.debug('Checking pause and resume actions...')
         unit = self.ceil_sentry
-        unit_name = unit.info['unit_name']
         juju_service = 'ceilometer'
 
         assert u.status_get(unit)[0] == "active"
 
-        action_id = self._run_action(unit_name, "pause")
-        assert self._wait_on_action(action_id), "Pause action failed."
+        action_id = unit.run_action("pause")
+        assert u.wait_on_action(action_id), "Pause action failed."
         assert u.status_get(unit)[0] == "maintenance"
 
         # trigger config-changed to ensure that services are still stopped
@@ -711,7 +718,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         self.d.configure(juju_service, {'debug': 'False'})
         assert u.status_get(unit)[0] == "maintenance"
 
-        action_id = self._run_action(unit_name, "resume")
-        assert self._wait_on_action(action_id), "Resume action failed."
+        action_id = unit.run_action("resume")
+        assert u.wait_on_action(action_id), "Resume action failed."
         assert u.status_get(unit)[0] == "active"
         u.log.debug('OK')

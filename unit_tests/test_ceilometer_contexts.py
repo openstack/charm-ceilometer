@@ -133,6 +133,22 @@ class CeilometerContextsTest(CharmTestCase):
             'event_time_to_live': -1,
         })
 
+    @patch.object(utils, 'get_shared_secret')
+    def test_ceilometer_context_ttl_values(self, secret):
+        secret.return_value = 'mysecret'
+        self.test_config.set('metering-time-to-live', 7.776e+06)
+        self.test_config.set('event-time-to-live', 7.776e+06)
+        context = contexts.CeilometerContext()()
+        self.assertEquals(context, {
+            'port': 8777,
+            'metering_secret': 'mysecret',
+            'api_workers': 1,
+            'metering_time_to_live': 7776000,
+            'event_time_to_live': 7776000,
+        })
+        self.assertTrue(type(context['metering_time_to_live']) is int)
+        self.assertTrue(type(context['event_time_to_live']) is int)
+
     def test_ceilometer_service_context(self):
         self.relation_ids.return_value = ['ceilometer-service:0']
         self.related_units.return_value = ['ceilometer/0']
