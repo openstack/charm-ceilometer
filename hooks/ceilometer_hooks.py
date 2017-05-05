@@ -41,6 +41,7 @@ from charmhelpers.core.host import (
     mkdir,
     init_is_systemd,
 )
+from charmhelpers.contrib.openstack.context import ADDRESS_TYPES
 from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
     os_release,
@@ -79,7 +80,7 @@ from charmhelpers.contrib.charmsupport import nrpe
 from charmhelpers.contrib.network.ip import (
     get_iface_for_address,
     get_netmask_for_address,
-    get_address_in_network
+    get_relation_ip,
 )
 from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
@@ -259,15 +260,19 @@ def cluster_joined(relation_id=None):
         peer_store('shared_secret', get_shared_secret())
 
     CONFIGS.write_all()
-    for addr_type in [ADMIN, PUBLIC, INTERNAL]:
-        address = get_address_in_network(
-            config('os-{}-network'.format(addr_type))
-        )
+
+    settings = {}
+
+    for addr_type in ADDRESS_TYPES:
+        address = get_relation_ip(
+            addr_type,
+            cidr_network=config('os-{}-network'.format(addr_type)))
         if address:
-            relation_set(
-                relation_id=relation_id,
-                relation_settings={'{}-address'.format(addr_type): address}
-            )
+            settings['{}-address'.format(addr_type)] = address
+
+    settings['private-address'] = get_relation_ip('cluster')
+
+    relation_set(relation_id=relation_id, relation_settings=settings)
 
 
 @hooks.hook('cluster-relation-changed',

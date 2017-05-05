@@ -42,6 +42,7 @@ from test_utils import CharmTestCase
 TO_PATCH = [
     'relation_get',
     'relation_set',
+    'related_units',
     'configure_installation_source',
     'openstack_upgrade_available',
     'do_openstack_upgrade',
@@ -68,6 +69,7 @@ TO_PATCH = [
     'mkdir',
     'init_is_systemd',
     'os_release',
+    'get_relation_ip',
 ]
 
 
@@ -272,7 +274,7 @@ class CeilometerHooksTest(CharmTestCase):
         mock_leader.return_value = False
 
         hooks.hooks.execute(['hooks/cluster-relation-joined'])
-        self.assertFalse(self.relation_set.called)
+        self.assertTrue(self.relation_set.called)
         self.assertTrue(self.CONFIGS.write_all.called)
 
     @patch('charmhelpers.core.hookenv.config')
@@ -290,29 +292,19 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
 
     @patch('charmhelpers.core.hookenv.config')
-    @patch.object(hooks, 'get_address_in_network')
     @patch.object(hooks, 'install_ceilometer_ocf')
     @patch.object(hooks, 'is_elected_leader')
-    def test_cluster_joined_os_networks(self, mock_leader, mock_install_ocf,
-                                        get_addr, mock_config):
+    def test_cluster_joined(self, mock_leader, mock_install_ocf, mock_config):
         mock_leader.return_value = False
-        get_addr.return_value = '10.0.0.100'
-        rel_settings = {'int-address': '10.0.0.100'}
+        self.get_relation_ip.side_effect = [
+            '10.0.0.100', '10.0.1.100', '10.0.2.100', '10.0.3.100']
+        rel_settings = {'private-address': '10.0.3.100',
+                        'public-address': '10.0.2.100',
+                        'internal-address': '10.0.1.100',
+                        'admin-address': '10.0.0.100'}
         hooks.hooks.execute(['hooks/cluster-relation-joined'])
         self.relation_set.assert_called_with(relation_id=None,
                                              relation_settings=rel_settings)
-
-    @patch('charmhelpers.core.hookenv.config')
-    @patch.object(hooks, 'get_address_in_network')
-    @patch.object(hooks, 'install_ceilometer_ocf')
-    @patch.object(hooks, 'is_elected_leader')
-    def test_cluster_joined_no_os_networks(self, mock_leader,
-                                           mock_install_ocf,
-                                           get_addr, mock_config):
-        mock_leader.return_value = False
-        get_addr.return_value = None
-        hooks.hooks.execute(['hooks/cluster-relation-joined'])
-        self.assertEquals(self.relation_set.call_count, 0)
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'set_shared_secret')
