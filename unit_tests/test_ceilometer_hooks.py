@@ -135,12 +135,38 @@ class CeilometerHooksTest(CharmTestCase):
         self.relation_set.assert_called_with(
             ceilometer_database='ceilometer')
 
+    @patch.object(hooks, 'ceilometer_upgrade')
+    @patch.object(hooks, 'keystone_joined')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
-    def test_any_changed(self, joined, mock_config):
+    def test_any_changed_with_metrics(self, ceilometer_joined, mock_config,
+                                      keystone_joined, ceilometer_upgrade):
+        self.CONFIGS.complete_contexts.return_value = [
+            'metric-service',
+            'identity-service',
+            'mongodb'
+        ]
+        self.relation_ids.return_value = ['identity-service:1']
+        hooks.hooks.execute(['hooks/shared-db-relation-changed'])
+        self.CONFIGS.write_all.assert_called_once()
+        ceilometer_joined.assert_called_once()
+        keystone_joined.assert_called_with(relid='identity-service:1')
+        ceilometer_upgrade.assert_called_once()
+        self.configure_https.assert_called_once()
+
+    @patch.object(hooks, 'ceilometer_upgrade')
+    @patch.object(hooks, 'keystone_joined')
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'ceilometer_joined')
+    def test_any_changed(self, ceilometer_joined, mock_config,
+                         keystone_joined, ceilometer_upgrade):
+        self.relation_ids.return_value = ['identity-service:1']
         hooks.hooks.execute(['hooks/shared-db-relation-changed'])
         self.assertTrue(self.CONFIGS.write_all.called)
-        self.assertTrue(joined.called)
+        self.assertTrue(ceilometer_joined.called)
+        keystone_joined.assert_called_with(relid='identity-service:1')
+        ceilometer_upgrade.assert_not_called()
+        self.configure_https.assert_called_once()
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'install')
@@ -150,14 +176,17 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(changed.called)
         self.assertTrue(install.called)
 
+    @patch.object(hooks, 'any_changed')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'cluster_joined')
-    def test_upgrade_charm_with_cluster(self, cluster_joined, mock_config):
+    def test_upgrade_charm_with_cluster(self, cluster_joined, mock_config,
+                                        any_changed):
         self.relation_ids.return_value = ['ceilometer/0',
                                           'ceilometer/1',
                                           'ceilometer/2']
         hooks.hooks.execute(['hooks/upgrade-charm'])
         self.assertEquals(cluster_joined.call_count, 3)
+        any_changed.assert_called_once()
 
     @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
@@ -494,3 +523,12 @@ class CeilometerHooksTest(CharmTestCase):
         self.relation_ids.return_value = ['identity-service/0']
         hooks.hooks.execute(['hooks/ha-relation-changed'])
         self.assertEquals(mock_keystone_joined.call_count, 1)
+
+    def test_metric_service_joined(self):
+        self.filter_installed_packages.return_value = ['python-gnocchiclient']
+        hooks.hooks.execute(['hooks/metric-service-relation-joined'])
+        self.filter_installed_packages.assert_called_with(
+            ['python-gnocchiclient']
+        )
+        self.apt_install.assert_called_with(['python-gnocchiclient'],
+                                            fatal=True)

@@ -39,6 +39,8 @@ requires:
   ha:
     interface: hacluster
     scope: container
+  metric-service:
+    interface: gnocchi
 peers:
   cluster:
     interface: ceilometer-ha

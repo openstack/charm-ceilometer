@@ -37,6 +37,7 @@ TO_PATCH = [
     'enable_memcache',
     'token_cache_pkgs',
     'os_release',
+    'is_leader',
 ]
 
 
@@ -209,7 +210,7 @@ class CeilometerUtilsTest(CharmTestCase):
                 utils.VERSION_PACKAGE
             )
 
-    @patch.object(utils, 'REQUIRED_INTERFACES')
+    @patch.object(utils, 'resolve_required_interfaces')
     @patch.object(utils, 'services')
     @patch.object(utils, 'determine_ports')
     @patch.object(utils, 'make_assess_status_func')
@@ -217,12 +218,13 @@ class CeilometerUtilsTest(CharmTestCase):
                                 make_assess_status_func,
                                 determine_ports,
                                 services,
-                                REQUIRED_INTERFACES):
+                                resolve_required_interfaces):
         services.return_value = 's1'
         determine_ports.return_value = 'p1'
+        resolve_required_interfaces.return_value = {'a': ['b']}
         utils.assess_status_func('test-config')
         make_assess_status_func.assert_called_once_with(
-            'test-config', REQUIRED_INTERFACES, services='s1', ports='p1')
+            'test-config', {'a': ['b']}, services='s1', ports='p1')
 
     def test_pause_unit_helper(self):
         with patch.object(utils, '_pause_resume_helper') as prh:
@@ -243,3 +245,47 @@ class CeilometerUtilsTest(CharmTestCase):
             utils._pause_resume_helper(f, 'some-config')
             asf.assert_called_once_with('some-config')
             f.assert_called_once_with('assessor', services='s1', ports='p1')
+
+    def test_resolve_required_interfaces(self):
+        self.os_release.side_effect = None
+        self.os_release.return_value = 'icehouse'
+        self.assertEqual(
+            utils.resolve_required_interfaces(),
+            {
+                'database': ['mongodb'],
+                'messaging': ['amqp'],
+                'identity': ['identity-service'],
+            }
+        )
+
+    def test_resolve_required_interfaces_mitaka(self):
+        self.os_release.side_effect = None
+        self.os_release.return_value = 'mitaka'
+        self.assertEqual(
+            utils.resolve_required_interfaces(),
+            {
+                'database': ['mongodb', 'metric-service'],
+                'messaging': ['amqp'],
+                'identity': ['identity-service'],
+            }
+        )
+
+    @patch.object(utils, 'subprocess')
+    def test_ceilometer_upgrade(self, mock_subprocess):
+        self.is_leader.return_value = True
+        self.os_release.return_value = 'ocata'
+        utils.ceilometer_upgrade()
+        mock_subprocess.check_call.assert_called_with(['ceilometer-upgrade'])
+
+    @patch.object(utils, 'subprocess')
+    def test_ceilometer_upgrade_mitaka(self, mock_subprocess):
+        self.is_leader.return_value = True
+        self.os_release.return_value = 'mitaka'
+        utils.ceilometer_upgrade()
+        mock_subprocess.check_call.assert_called_with(['ceilometer-dbsync'])
+
+    @patch.object(utils, 'subprocess')
+    def test_ceilometer_upgrade_follower(self, mock_subprocess):
+        self.is_leader.return_value = False
+        utils.ceilometer_upgrade()
+        mock_subprocess.check_call.assert_not_called()
