@@ -34,6 +34,7 @@ from charmhelpers.core.hookenv import (
     Hooks, UnregisteredHookError,
     log,
     status_set,
+    WARNING,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -82,6 +83,7 @@ from charmhelpers.contrib.network.ip import (
     get_iface_for_address,
     get_netmask_for_address,
     get_relation_ip,
+    is_ipv6,
 )
 from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
@@ -331,12 +333,24 @@ def ha_joined(relation_id=None):
     else:
         vip_group = []
         for vip in cluster_config['vip'].split():
-            res_ceilometer_vip = 'ocf:heartbeat:IPaddr2'
-            vip_params = 'ip'
+            if is_ipv6(vip):
+                res_ceilometer_vip = 'ocf:heartbeat:IPv6addr'
+                vip_params = 'ipv6addr'
+            else:
+                res_ceilometer_vip = 'ocf:heartbeat:IPaddr2'
+                vip_params = 'ip'
 
             iface = get_iface_for_address(vip)
             if iface is not None:
                 vip_key = 'res_ceilometer_{}_vip'.format(iface)
+                if vip_key in vip_group:
+                    if vip not in resource_params[vip_key]:
+                        vip_key = '{}_{}'.format(vip_key, vip_params)
+                    else:
+                        log("Resource '%s' (vip='%s') already exists in "
+                            "vip group - skipping" % (vip_key, vip), WARNING)
+                        continue
+
                 resources[vip_key] = res_ceilometer_vip
                 resource_params[vip_key] = (
                     'params {ip}="{vip}" cidr_netmask="{netmask}"'
