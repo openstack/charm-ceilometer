@@ -28,6 +28,7 @@ from ceilometer_contexts import (
     MongoDBContext,
     CeilometerContext,
     HAProxyContext,
+    MetricServiceContext,
     CEILOMETER_PORT,
 )
 from charmhelpers.contrib.openstack.utils import (
@@ -43,9 +44,10 @@ from charmhelpers.contrib.openstack.utils import (
     enable_memcache,
     CompareOpenStackReleases,
 )
-from charmhelpers.core.hookenv import config, log
+from charmhelpers.core.hookenv import config, log, is_leader
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
 from charmhelpers.core.host import init_is_systemd
+from charmhelpers.core.decorators import retry_on_exception
 from copy import deepcopy
 
 HAPROXY_CONF = '/etc/haproxy/haproxy.cfg'
@@ -119,7 +121,8 @@ CONFIG_FILES = OrderedDict([
                           CeilometerContext(),
                           context.SyslogContext(),
                           HAProxyContext(),
-                          context.MemcacheContext()],
+                          context.MemcacheContext(),
+                          MetricServiceContext()],
         'services': CEILOMETER_BASE_SERVICES
     }),
     (CEILOMETER_API_SYSTEMD_CONF, {
@@ -363,6 +366,18 @@ def assess_status(configs):
     os_application_version_set(VERSION_PACKAGE)
 
 
+def resolve_required_interfaces():
+    """Helper function to build a map of required interfaces based on the
+    OpenStack release being deployed.
+
+    @returns dict - a dictionary keyed by high-level type of interfaces names
+    """
+    required_ints = deepcopy(REQUIRED_INTERFACES)
+    if CompareOpenStackReleases(os_release('ceilometer-common')) >= 'mitaka':
+        required_ints['database'].append('metric-service')
+    return required_ints
+
+
 def assess_status_func(configs):
     """Helper function to create the function that will assess_status() for
     the unit.
@@ -375,7 +390,7 @@ def assess_status_func(configs):
     @return f() -> None : a function that assesses the unit's workload status
     """
     return make_assess_status_func(
-        configs, REQUIRED_INTERFACES,
+        configs, resolve_required_interfaces(),
         services=services(), ports=determine_ports())
 
 
@@ -437,3 +452,16 @@ def disable_package_apache_site():
     """
     if os.path.exists(PACKAGE_CEILOMETER_API_CONF):
         subprocess.check_call(['a2dissite', 'ceilometer-api'])
+
+
+@retry_on_exception(5, exc_type=subprocess.CalledProcessError)
+def ceilometer_upgrade():
+    """Execute ceilometer-upgrade command, with retry on failure if gnocchi
+    API is not ready for requests"""
+    if is_leader():
+        if (CompareOpenStackReleases(os_release('ceilometer-common')) >=
+                'newton'):
+            cmd = ['ceilometer-upgrade']
+        else:
+            cmd = ['ceilometer-dbsync']
+        subprocess.check_call(cmd)

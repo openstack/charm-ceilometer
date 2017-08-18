@@ -70,6 +70,7 @@ from ceilometer_utils import (
     set_shared_secret,
     assess_status,
     reload_systemd,
+    ceilometer_upgrade,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -134,32 +135,36 @@ def db_joined():
     relation_set(ceilometer_database=CEILOMETER_DB)
 
 
+@hooks.hook("metric-service-relation-joined")
+def metric_service_joined():
+    # NOTE(jamespage): gnocchiclient is required to support
+    #                  the gnocchi event dispatcher
+    apt_install(filter_installed_packages(['python-gnocchiclient']),
+                fatal=True)
+
+
 @hooks.hook("amqp-relation-changed",
+            "amqp-relation-departed",
             "shared-db-relation-changed",
-            "shared-db-relation-departed")
+            "shared-db-relation-departed",
+            "identity-service-relation-changed",
+            "identity-service-relation-departed",
+            "metric-service-relation-changed",
+            "metric-service-relation-departed")
 @restart_on_change(restart_map())
 def any_changed():
     CONFIGS.write_all()
     configure_https()
+    for rid in relation_ids('identity-service'):
+        keystone_joined(relid=rid)
     ceilometer_joined()
-
-
-@hooks.hook("identity-service-relation-changed")
-@restart_on_change(restart_map())
-def identity_service_relation_changed():
-    CONFIGS.write_all()
-    configure_https()
-    keystone_joined()
-    ceilometer_joined()
-
-
-@hooks.hook("amqp-relation-departed")
-@restart_on_change(restart_map())
-def amqp_departed():
-    if 'amqp' not in CONFIGS.complete_contexts():
-        log('amqp relation incomplete. Peer not ready?')
-        return
-    CONFIGS.write_all()
+    # NOTE(jamespage): ceilometer@ocata requires both gnocchi
+    #                  and mongodb to be configured to successfully
+    #                  upgrade the underlying data stores.
+    if ('metric-service' in CONFIGS.complete_contexts() and
+            'identity-service' in CONFIGS.complete_contexts() and
+            'mongodb' in CONFIGS.complete_contexts()):
+        ceilometer_upgrade()
 
 
 def configure_https():

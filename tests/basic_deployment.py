@@ -438,44 +438,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
         u.log.debug('OK')
 
-    def test_209_nova_compute_ceilometer_agent_relation(self):
-        """Verify the nova-compute to ceilometer relation data"""
-        u.log.debug('Checking nova-compute:ceilometer relation data...')
-        unit = self.nova_sentry
-        relation = ['nova-ceilometer', 'ceilometer-agent:nova-ceilometer']
-        expected = {'private-address': u.valid_ip}
-
-        ret = u.validate_relation_data(unit, relation, expected)
-        if ret:
-            message = u.relation_error('ceilometer-service', ret)
-            amulet.raise_status(amulet.FAIL, msg=message)
-
-        u.log.debug('OK')
-
-    def test_210_ceilometer_agent_nova_compute_relation(self):
-        """Verify the ceilometer to nova-compute relation data"""
-        u.log.debug('Checking ceilometer:nova-compute relation data...')
-        unit = self.ceil_agent_sentry
-        relation = ['nova-ceilometer', 'nova-compute:nova-ceilometer']
-        sub = ('{"nova": {"/etc/nova/nova.conf": {"sections": {"DEFAULT": '
-               '[["instance_usage_audit", "True"], '
-               '["instance_usage_audit_period", "hour"], '
-               '["notify_on_state_change", "vm_and_task_state"], '
-               '["notification_driver", "ceilometer.compute.nova_notifier"], '
-               '["notification_driver", '
-               '"nova.openstack.common.notifier.rpc_notifier"]]}}}}')
-        expected = {
-            'subordinate_configuration': sub,
-            'private-address': u.valid_ip
-        }
-
-        ret = u.validate_relation_data(unit, relation, expected)
-        if ret:
-            message = u.relation_error('ceilometer-service', ret)
-            amulet.raise_status(amulet.FAIL, msg=message)
-
-        u.log.debug('OK')
-
     def test_300_ceilometer_config(self):
         """Verify the data in the ceilometer config file."""
         u.log.debug('Checking ceilometer config file data...')
@@ -546,49 +508,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             if ret:
                 message = "ceilometer config error: {}".format(ret)
                 amulet.raise_status(amulet.FAIL, msg=message)
-
-        u.log.debug('OK')
-
-    def test_301_nova_config(self):
-        """Verify data in the nova compute nova config file"""
-        u.log.debug('Checking nova compute config file...')
-        unit = self.nova_sentry
-        conf = '/etc/nova/nova.conf'
-        expected = {
-            'DEFAULT': {
-                'verbose': 'False',
-                'debug': 'False',
-                'use_syslog': 'False',
-                'my_ip': u.valid_ip,
-            }
-        }
-
-        # NOTE(beisner): notification_driver is not checked like the
-        # others, as configparser does not support duplicate config
-        # options, and dicts cant have duplicate keys.
-        # Ex. from conf file:
-        #   notification_driver = ceilometer.compute.nova_notifier
-        #   notification_driver = nova.openstack.common.notifier.rpc_notifier
-        for section, pairs in expected.iteritems():
-            ret = u.validate_config_data(unit, conf, section, pairs)
-            if ret:
-                message = "ceilometer config error: {}".format(ret)
-                amulet.raise_status(amulet.FAIL, msg=message)
-
-        # Check notification_driver existence via simple grep cmd
-        lines = [('notification_driver = '
-                  'ceilometer.compute.nova_notifier'),
-                 ('notification_driver = '
-                  'nova.openstack.common.notifier.rpc_notifier')]
-
-        sentry_units = [unit]
-        cmds = []
-        for line in lines:
-            cmds.append('grep "{}" {}'.format(line, conf))
-
-        ret = u.check_commands_on_units(cmds, sentry_units)
-        if ret:
-            amulet.raise_status(amulet.FAIL, msg=ret)
 
         u.log.debug('OK')
 

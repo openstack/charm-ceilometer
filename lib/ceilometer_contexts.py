@@ -145,3 +145,17 @@ class ApacheSSLContext(SSLContext):
 
     external_ports = [CEILOMETER_PORT]
     service_namespace = "ceilometer"
+
+
+class MetricServiceContext(OSContextGenerator):
+    interfaces = ['metric-service']
+
+    def __call__(self):
+
+        for relid in relation_ids('metric-service'):
+            for unit in related_units(relid):
+                gnocchi_url = relation_get('gnocchi_url', unit=unit, rid=relid)
+                if gnocchi_url:
+                    return {'gnocchi_url': gnocchi_url,
+                            'archive_policy': config('gnocchi-archive-policy')}
+        return {}
