@@ -16,7 +16,6 @@ series:
   - xenial
   - zesty
   - trusty
-  - yakkety
 extra-bindings:
   public:
   admin:
