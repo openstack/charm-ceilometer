@@ -228,3 +228,10 @@ options:
     description: |
       Archive retention policy to use when Ceilometer is deployed with
       Gnocchi for resource, metric and measures storage.
+  use-internal-endpoints:
+    type: boolean
+    default: False
+    description: |
+      Openstack mostly defaults to using public endpoints for
+      internal communication between services. If set to True this option
+      will configure services to use internal endpoints where possible.
