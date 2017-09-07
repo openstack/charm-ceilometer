@@ -43,6 +43,7 @@ from charmhelpers.contrib.openstack.utils import (
     token_cache_pkgs,
     enable_memcache,
     CompareOpenStackReleases,
+    reset_os_release,
 )
 from charmhelpers.core.hookenv import config, log, is_leader
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
@@ -285,6 +286,7 @@ def do_openstack_upgrade(configs):
     ]
     apt_update(fatal=True)
     apt_upgrade(options=dpkg_opts, fatal=True, dist=True)
+    reset_os_release()
     apt_install(packages=get_packages(),
                 options=dpkg_opts,
                 fatal=True)

@@ -38,6 +38,7 @@ TO_PATCH = [
     'token_cache_pkgs',
     'os_release',
     'is_leader',
+    'reset_os_release',
 ]
 
 
@@ -183,6 +184,7 @@ class CeilometerUtilsTest(CharmTestCase):
         self.configure_installation_source.assert_called_with(
             'cloud:trusty-kilo'
         )
+        self.reset_os_release.assert_called()
 
     def test_get_packages_icehouse(self):
         self.get_os_codename_install_source.return_value = 'icehouse'
