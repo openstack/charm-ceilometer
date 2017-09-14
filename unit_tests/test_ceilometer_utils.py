@@ -106,7 +106,7 @@ class CeilometerUtilsTest(CharmTestCase):
         self.get_os_codename_install_source.return_value = 'icehouse'
         self.os_release.return_value = 'icehouse'
         restart_map = utils.restart_map()
-        self.assertEquals(
+        self.assertEqual(
             restart_map,
             {'/etc/ceilometer/ceilometer.conf': [
                 'ceilometer-agent-central',
@@ -132,7 +132,7 @@ class CeilometerUtilsTest(CharmTestCase):
         self.os_release.return_value = 'mitaka'
         self.maxDiff = None
         restart_map = utils.restart_map()
-        self.assertEquals(
+        self.assertEqual(
             restart_map,
             {'/etc/ceilometer/ceilometer.conf': [
                 'ceilometer-agent-central',

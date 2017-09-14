@@ -185,7 +185,7 @@ class CeilometerHooksTest(CharmTestCase):
                                           'ceilometer/1',
                                           'ceilometer/2']
         hooks.hooks.execute(['hooks/upgrade-charm'])
-        self.assertEquals(cluster_joined.call_count, 3)
+        self.assertEqual(cluster_joined.call_count, 3)
         any_changed.assert_called_once()
 
     @patch.object(hooks, 'install_event_pipeline_setting')
@@ -360,7 +360,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.peer_retrieve.return_value = "leader_secret"
         mock_get_secret.return_value = "leader_secret"
         hooks.hooks.execute(['hooks/cluster-relation-changed'])
-        self.assertEquals(mock_set_secret.call_count, 0)
+        self.assertEqual(mock_set_secret.call_count, 0)
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'get_hacluster_config')
@@ -375,7 +375,7 @@ class CeilometerHooksTest(CharmTestCase):
         mock_iface.return_value = 'eth0'
         mock_netmask.return_value = '255.255.255.10'
         hooks.hooks.execute(['hooks/ha-relation-joined'])
-        self.assertEquals(self.relation_set.call_count, 2)
+        self.assertEqual(self.relation_set.call_count, 2)
 
         exp_resources = {
             'res_ceilometer_haproxy': 'lsb:haproxy',
@@ -425,7 +425,7 @@ class CeilometerHooksTest(CharmTestCase):
                                             'ha-mcastport': 5802}
 
         hooks.hooks.execute(['hooks/ha-relation-joined'])
-        self.assertEquals(self.relation_set.call_count, 2)
+        self.assertEqual(self.relation_set.call_count, 2)
 
         exp_resources = {
             'res_ceilometer_haproxy': 'lsb:haproxy',
@@ -514,7 +514,7 @@ class CeilometerHooksTest(CharmTestCase):
     def test_ha_changed_not_clustered(self, mock_keystone_joined, mock_config):
         self.relation_get.return_value = None
         hooks.hooks.execute(['hooks/ha-relation-changed'])
-        self.assertEquals(mock_keystone_joined.call_count, 0)
+        self.assertEqual(mock_keystone_joined.call_count, 0)
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'keystone_joined')
@@ -522,7 +522,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.relation_get.return_value = 'yes'
         self.relation_ids.return_value = ['identity-service/0']
         hooks.hooks.execute(['hooks/ha-relation-changed'])
-        self.assertEquals(mock_keystone_joined.call_count, 1)
+        self.assertEqual(mock_keystone_joined.call_count, 1)
 
     def test_metric_service_joined(self):
         self.filter_installed_packages.return_value = ['python-gnocchiclient']

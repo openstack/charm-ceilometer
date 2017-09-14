@@ -41,21 +41,21 @@ class CeilometerContextsTest(CharmTestCase):
     def test_logging_context(self):
         self.test_config.set('debug', False)
         self.test_config.set('verbose', False)
-        self.assertEquals(contexts.LoggingConfigContext()(),
-                          {'debug': False, 'verbose': False})
+        self.assertEqual(contexts.LoggingConfigContext()(),
+                         {'debug': False, 'verbose': False})
         self.test_config.set('debug', True)
         self.test_config.set('verbose', False)
-        self.assertEquals(contexts.LoggingConfigContext()(),
-                          {'debug': True, 'verbose': False})
+        self.assertEqual(contexts.LoggingConfigContext()(),
+                         {'debug': True, 'verbose': False})
         self.test_config.set('debug', True)
         self.test_config.set('verbose', True)
-        self.assertEquals(contexts.LoggingConfigContext()(),
-                          {'debug': True, 'verbose': True})
+        self.assertEqual(contexts.LoggingConfigContext()(),
+                         {'debug': True, 'verbose': True})
 
     def test_mongodb_context_not_related(self):
         self.relation_ids.return_value = []
         self.os_release.return_value = 'icehouse'
-        self.assertEquals(contexts.MongoDBContext()(), {})
+        self.assertEqual(contexts.MongoDBContext()(), {})
 
     def test_mongodb_context_related(self):
         self.relation_ids.return_value = ['shared-db:0']
@@ -66,9 +66,9 @@ class CeilometerContextsTest(CharmTestCase):
         }
         self.test_relation.set(data)
         self.os_release.return_value = 'havana'
-        self.assertEquals(contexts.MongoDBContext()(),
-                          {'db_host': 'mongodb', 'db_port': 8090,
-                           'db_name': 'ceilometer'})
+        self.assertEqual(contexts.MongoDBContext()(),
+                         {'db_host': 'mongodb', 'db_port': 8090,
+                          'db_name': 'ceilometer'})
 
     def test_mongodb_context_related_replset_single_mongo(self):
         self.relation_ids.return_value = ['shared-db:0']
@@ -80,9 +80,9 @@ class CeilometerContextsTest(CharmTestCase):
         }
         self.test_relation.set(data)
         self.os_release.return_value = 'icehouse'
-        self.assertEquals(contexts.MongoDBContext()(),
-                          {'db_host': 'mongodb-0', 'db_port': 8090,
-                           'db_name': 'ceilometer'})
+        self.assertEqual(contexts.MongoDBContext()(),
+                         {'db_host': 'mongodb-0', 'db_port': 8090,
+                          'db_name': 'ceilometer'})
 
     @patch.object(contexts, 'context_complete')
     def test_mongodb_context_related_replset_missing_values(self, mock_ctxcmp):
@@ -96,7 +96,7 @@ class CeilometerContextsTest(CharmTestCase):
         }
         self.test_relation.set(data)
         self.os_release.return_value = 'icehouse'
-        self.assertEquals(contexts.MongoDBContext()(), {})
+        self.assertEqual(contexts.MongoDBContext()(), {})
 
     def test_mongodb_context_related_replset_multiple_mongo(self):
         self.relation_ids.return_value = ['shared-db:0']
@@ -119,14 +119,14 @@ class CeilometerContextsTest(CharmTestCase):
         self.relation_get.side_effect = relation_get
 
         self.os_release.return_value = 'icehouse'
-        self.assertEquals(contexts.MongoDBContext()(),
-                          {'db_mongo_servers': 'mongodb-0:8090,mongodb-1:8090',
-                           'db_name': 'ceilometer', 'db_replset': 'replset-1'})
+        self.assertEqual(contexts.MongoDBContext()(),
+                         {'db_mongo_servers': 'mongodb-0:8090,mongodb-1:8090',
+                          'db_name': 'ceilometer', 'db_replset': 'replset-1'})
 
     @patch.object(utils, 'get_shared_secret')
     def test_ceilometer_context(self, secret):
         secret.return_value = 'mysecret'
-        self.assertEquals(contexts.CeilometerContext()(), {
+        self.assertEqual(contexts.CeilometerContext()(), {
             'port': 8777,
             'metering_secret': 'mysecret',
             'api_workers': 1,
@@ -140,7 +140,7 @@ class CeilometerContextsTest(CharmTestCase):
         self.test_config.set('metering-time-to-live', 7.776e+06)
         self.test_config.set('event-time-to-live', 7.776e+06)
         context = contexts.CeilometerContext()()
-        self.assertEquals(context, {
+        self.assertEqual(context, {
             'port': 8777,
             'metering_secret': 'mysecret',
             'api_workers': 1,
@@ -158,18 +158,18 @@ class CeilometerContextsTest(CharmTestCase):
             'keystone_host': 'test'
         }
         self.test_relation.set(data)
-        self.assertEquals(contexts.CeilometerServiceContext()(), data)
+        self.assertEqual(contexts.CeilometerServiceContext()(), data)
 
     def test_ceilometer_service_context_not_related(self):
         self.relation_ids.return_value = []
-        self.assertEquals(contexts.CeilometerServiceContext()(), {})
+        self.assertEqual(contexts.CeilometerServiceContext()(), {})
 
     @patch('os.path.exists')
     def test_get_shared_secret_existing(self, exists):
         exists.return_value = True
         with mock_open(utils.SHARED_SECRET, u'mysecret'):
-            self.assertEquals(utils.get_shared_secret(),
-                              'mysecret')
+            self.assertEqual(utils.get_shared_secret(),
+                             'mysecret')
 
     @patch('uuid.uuid4')
     @patch('os.path.exists')
@@ -177,8 +177,8 @@ class CeilometerContextsTest(CharmTestCase):
         exists.return_value = False
         uuid4.return_value = 'newsecret'
         with patch('__builtin__.open'):
-            self.assertEquals(utils.get_shared_secret(),
-                              'newsecret')
+            self.assertEqual(utils.get_shared_secret(),
+                             'newsecret')
 
     @patch.object(contexts, 'determine_apache_port')
     @patch.object(contexts, 'determine_api_port')
@@ -194,4 +194,4 @@ class CeilometerContextsTest(CharmTestCase):
             'service_ports': {'ceilometer_api': [haproxy_port, apache_port]},
             'port': api_port
         }
-        self.assertEquals(contexts.HAProxyContext()(), expected)
+        self.assertEqual(contexts.HAProxyContext()(), expected)
