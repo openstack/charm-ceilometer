@@ -1,6 +1,7 @@
 bin
 .coverage
 .testrepository
+.stestr
 .tox
 tags
 *.sw[nop]
