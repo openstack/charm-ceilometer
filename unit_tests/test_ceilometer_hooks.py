@@ -42,7 +42,6 @@ from test_utils import CharmTestCase
 TO_PATCH = [
     'relation_get',
     'relation_set',
-    'related_units',
     'configure_installation_source',
     'openstack_upgrade_available',
     'do_openstack_upgrade',
@@ -68,7 +67,6 @@ TO_PATCH = [
     'run_in_apache',
     'mkdir',
     'init_is_systemd',
-    'os_release',
     'get_relation_ip',
 ]
 
@@ -191,8 +189,7 @@ class CeilometerHooksTest(CharmTestCase):
     @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
-    @patch.object(hooks, 'install_ceilometer_ocf')
-    def test_config_changed_no_upgrade(self, ocf,
+    def test_config_changed_no_upgrade(self,
                                        joined, mock_config, event_pipe):
         self.openstack_upgrade_available.return_value = False
         hooks.hooks.execute(['hooks/config-changed'])
@@ -203,13 +200,11 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
-        self.assertTrue(ocf.called)
 
     @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
-    @patch.object(hooks, 'install_ceilometer_ocf')
-    def test_config_changed_upgrade(self, ocf,
+    def test_config_changed_upgrade(self,
                                     joined, mock_config, event_pipe):
         self.openstack_upgrade_available.return_value = True
         hooks.hooks.execute(['hooks/config-changed'])
@@ -220,11 +215,9 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
-        self.assertTrue(ocf.called)
 
     @patch.object(hooks, 'install_event_pipeline_setting')
-    @patch.object(hooks, 'install_ceilometer_ocf')
-    def test_config_changed_with_openstack_upgrade_action(self, ocf,
+    def test_config_changed_with_openstack_upgrade_action(self,
                                                           event_pipe):
         self.openstack_upgrade_available.return_value = True
         self.test_config.set('action-managed-upgrade', True)
@@ -233,7 +226,6 @@ class CeilometerHooksTest(CharmTestCase):
 
         self.assertFalse(self.do_openstack_upgrade.called)
         self.assertTrue(event_pipe.called)
-        self.assertTrue(ocf.called)
 
     @patch.object(hooks, 'canonical_url')
     @patch('charmhelpers.core.hookenv.config')
@@ -296,9 +288,8 @@ class CeilometerHooksTest(CharmTestCase):
         self.service_restart.assert_has_calls([call1, call2], any_order=False)
 
     @patch('charmhelpers.core.hookenv.config')
-    @patch.object(hooks, 'install_ceilometer_ocf')
     @patch.object(hooks, 'is_elected_leader')
-    def test_cluster_joined_not_leader(self, mock_leader, mock_install_ocf,
+    def test_cluster_joined_not_leader(self, mock_leader,
                                        mock_config):
         mock_leader.return_value = False
 
@@ -308,9 +299,8 @@ class CeilometerHooksTest(CharmTestCase):
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'get_shared_secret')
-    @patch.object(hooks, 'install_ceilometer_ocf')
     @patch.object(hooks, 'is_elected_leader')
-    def test_cluster_joined_is_leader(self, mock_leader, mock_install_ocf,
+    def test_cluster_joined_is_leader(self, mock_leader,
                                       shared_secret, mock_config):
         mock_leader.return_value = True
         shared_secret.return_value = 'secret'
@@ -321,9 +311,8 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
 
     @patch('charmhelpers.core.hookenv.config')
-    @patch.object(hooks, 'install_ceilometer_ocf')
     @patch.object(hooks, 'is_elected_leader')
-    def test_cluster_joined(self, mock_leader, mock_install_ocf, mock_config):
+    def test_cluster_joined(self, mock_leader, mock_config):
         mock_leader.return_value = False
         self.get_relation_ip.side_effect = [
             '10.0.0.100', '10.0.1.100', '10.0.2.100', '10.0.3.100']
@@ -368,7 +357,6 @@ class CeilometerHooksTest(CharmTestCase):
     @patch.object(hooks, 'get_netmask_for_address')
     def test_ha_joined(self, mock_netmask, mock_iface, mock_cluster_config,
                        mock_config):
-        self.os_release.return_value = 'kilo'
         mock_cluster_config.return_value = {'vip': '10.0.5.100',
                                             'ha-bindiface': 'bnd0',
                                             'ha-mcastport': 5802}
@@ -379,8 +367,7 @@ class CeilometerHooksTest(CharmTestCase):
 
         exp_resources = {
             'res_ceilometer_haproxy': 'lsb:haproxy',
-            'res_ceilometer_agent_central': ('ocf:openstack:'
-                                             'ceilometer-agent-central'),
+            'res_ceilometer_agent_central': 'lsb:ceilometer-agent-central',
             'res_ceilometer_eth0_vip': 'ocf:heartbeat:IPaddr2'
         }
         exp_resource_params = {
@@ -399,58 +386,7 @@ class CeilometerHooksTest(CharmTestCase):
                      corosync_mcastport=5802,
                      resources=exp_resources,
                      resource_params=exp_resource_params,
-                     delete_resources=[],
-                     clones=exp_clones)
-        self.relation_set.assert_has_calls([call1, call2], any_order=False)
-
-    @patch('charmhelpers.core.hookenv.config')
-    @patch.object(hooks, 'get_netmask_for_address')
-    @patch.object(hooks, 'get_hacluster_config')
-    @patch.object(hooks, 'get_iface_for_address')
-    @patch.object(hooks, 'relation_ids')
-    @patch.object(hooks, 'related_units')
-    @patch.object(hooks, 'relation_get')
-    def test_ha_joined_ssl(self, mock_rel_get, mock_rel_units, mock_rel_ids,
-                           mock_iface, mock_cluster_config, mock_netmask,
-                           mock_config):
-        self.os_release.return_value = 'kilo'
-        mock_rel_ids.return_value = 'amqp:0'
-        mock_rel_units.return_value = 'rabbitmq-server/0'
-        mock_rel_get.return_value = '5671'
-
-        mock_iface.return_value = 'eth0'
-        mock_netmask.return_value = '255.255.255.10'
-        mock_cluster_config.return_value = {'vip': '10.0.5.100',
-                                            'ha-bindiface': 'bnd0',
-                                            'ha-mcastport': 5802}
-
-        hooks.hooks.execute(['hooks/ha-relation-joined'])
-        self.assertEqual(self.relation_set.call_count, 2)
-
-        exp_resources = {
-            'res_ceilometer_haproxy': 'lsb:haproxy',
-            'res_ceilometer_agent_central': ('ocf:openstack:'
-                                             'ceilometer-agent-central'),
-            'res_ceilometer_eth0_vip': 'ocf:heartbeat:IPaddr2'
-        }
-        exp_resource_params = {
-            'res_ceilometer_haproxy': 'op monitor interval="5s"',
-            'res_ceilometer_agent_central': ('params amqp_server_port="5671" '
-                                             'op monitor interval="30s"'),
-            'res_ceilometer_eth0_vip': ('params ip="10.0.5.100" '
-                                        'cidr_netmask="255.255.255.10" '
-                                        'nic="eth0"')
-        }
-        exp_clones = {'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'}
-        call1 = call(relation_id=None,
-                     groups={'grp_ceilometer_vips': 'res_ceilometer_eth0_vip'})
-        call2 = call(relation_id=None,
-                     init_services={'res_ceilometer_haproxy': 'haproxy'},
-                     corosync_bindiface='bnd0',
-                     corosync_mcastport=5802,
-                     resources=exp_resources,
-                     resource_params=exp_resource_params,
-                     delete_resources=[],
+                     delete_resources=['res_ceilometer_polling'],
                      clones=exp_clones)
         self.relation_set.assert_has_calls([call1, call2], any_order=False)
 
@@ -464,7 +400,6 @@ class CeilometerHooksTest(CharmTestCase):
                                     'ip_address="10.0.0.1"'})
 
         self.test_config.set('dns-ha', True)
-        self.os_release.return_value = 'kilo'
         mock_cluster_config.return_value = {
             'vip': None,
             'ha-bindiface': 'em0',
@@ -481,32 +416,20 @@ class CeilometerHooksTest(CharmTestCase):
             'resources': {'res_ceilometer_public_hostname': 'ocf:maas:dns',
                           'res_ceilometer_haproxy': 'lsb:haproxy',
                           'res_ceilometer_agent_central':
-                          'ocf:openstack:ceilometer-agent-central'},
+                          'lsb:ceilometer-agent-central'},
             'resource_params': {
                 'res_ceilometer_public_hostname':
                     'params fqdn="ceilometer.maas" '
                     'ip_address="10.0.0.1"',
                 'res_ceilometer_haproxy': 'op monitor interval="5s"',
                 'res_ceilometer_agent_central': 'op monitor interval="30s"'},
-            'delete_resources': [],
+            'delete_resources': ['res_ceilometer_polling'],
             'clones': {'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'}
         }
         self.update_dns_ha_resource_params.side_effect = _fake_update
 
         hooks.ha_joined()
         self.assertTrue(self.update_dns_ha_resource_params.called)
-        self.relation_set.assert_called_with(**args)
-
-        self.os_release.return_value = 'liberty'
-        args.get('resources').pop('res_ceilometer_agent_central')
-        args.get('resource_params').pop('res_ceilometer_agent_central')
-        args.get('resources')['res_ceilometer_polling'] = \
-            'ocf:openstack:ceilometer-polling'
-        args.get('resource_params')['res_ceilometer_polling'] = \
-            'op monitor interval="30s"'
-        args['delete_resources'] = ['res_ceilometer_agent_central']
-        self.update_dns_ha_resource_params.side_effect = _fake_update
-        hooks.ha_joined()
         self.relation_set.assert_called_with(**args)
 
     @patch('charmhelpers.core.hookenv.config')
