@@ -34,6 +34,7 @@ from charmhelpers.core.hookenv import (
     log,
     status_set,
     WARNING,
+    DEBUG,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -84,6 +85,7 @@ from charmhelpers.contrib.network.ip import (
 )
 from charmhelpers.contrib.hahelpers.cluster import (
     get_hacluster_config,
+    is_clustered,
     is_elected_leader
 )
 from charmhelpers.contrib.peerstorage import (
@@ -350,6 +352,10 @@ def ha_changed():
 
 @hooks.hook("identity-service-relation-joined")
 def keystone_joined(relid=None):
+    if config('vip') and not is_clustered():
+        log('Defering registration until clustered', level=DEBUG)
+        return
+
     public_url = "{}:{}".format(
         canonical_url(CONFIGS, PUBLIC),
         CEILOMETER_PORT

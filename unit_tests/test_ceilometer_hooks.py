@@ -68,6 +68,7 @@ TO_PATCH = [
     'mkdir',
     'init_is_systemd',
     'get_relation_ip',
+    'is_clustered',
 ]
 
 
@@ -263,6 +264,12 @@ class CeilometerHooksTest(CharmTestCase):
             public_url=public_url, admin_url=url, internal_url=url,
             requested_roles=hooks.CEILOMETER_ROLE,
             region='myregion', relation_id=None)
+
+    def test_keystone_joined_partial_cluster(self):
+        self.is_clustered.return_value = False
+        self.test_config.set('vip', '10.0.0.10')
+        hooks.keystone_joined()
+        self.assertFalse(self.relation_set.called)
 
     @patch('charmhelpers.core.hookenv.config')
     def test_ceilometer_joined(self, mock_config):
