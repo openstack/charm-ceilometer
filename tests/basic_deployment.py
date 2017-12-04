@@ -63,7 +63,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             {'name': 'rabbitmq-server'},
             {'name': 'keystone'},
             {'name': 'mongodb',
-             'location': 'cs:~1chb1n/{}/mongodb'.format(self.series)},
+             'location': 'cs:~thedac/{}/mongodb'.format(self.series)},
             {'name': 'glance'},  # to satisfy workload status
             {'name': 'ceilometer-agent'},
             {'name': 'nova-compute'}

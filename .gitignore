@@ -7,3 +7,4 @@ tags
 *.sw[nop]
 *.pyc
 .unit-state.db
+func-results.json
