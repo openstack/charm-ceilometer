@@ -126,6 +126,8 @@ class CeilometerUtilsTest(CharmTestCase):
                 'ceilometer-alarm-notifier',
                 'ceilometer-alarm-evaluator',
                 'ceilometer-agent-notification'],
+             '/etc/ceilometer/pipeline.yaml': [
+                 'ceilometer-collector'],
              '/etc/systemd/system/ceilometer-api.service.d/override.conf': [
                 'ceilometer-api'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],
@@ -150,6 +152,8 @@ class CeilometerUtilsTest(CharmTestCase):
                 'ceilometer-collector',
                 'ceilometer-api',
                 'ceilometer-agent-notification'],
+             '/etc/ceilometer/pipeline.yaml': [
+                 'ceilometer-collector'],
              '/etc/systemd/system/ceilometer-api.service.d/override.conf': [
                 'ceilometer-api'],
              '/etc/haproxy/haproxy.cfg': ['haproxy'],

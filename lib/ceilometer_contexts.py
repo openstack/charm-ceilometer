@@ -121,6 +121,14 @@ class CeilometerServiceContext(OSContextGenerator):
         return {}
 
 
+class CeilometerPipelineContext(OSContextGenerator):
+    def __call__(self):
+        ctxt = {
+            'pipeline_yaml': config('pipeline-yaml')
+        }
+        return ctxt
+
+
 class HAProxyContext(OSContextGenerator):
     interfaces = ['ceilometer-haproxy']
 

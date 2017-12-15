@@ -28,6 +28,7 @@ from ceilometer_contexts import (
     LoggingConfigContext,
     MongoDBContext,
     CeilometerContext,
+    CeilometerPipelineContext,
     HAProxyContext,
     MetricServiceContext,
     CEILOMETER_PORT,
@@ -68,6 +69,7 @@ from copy import deepcopy
 HAPROXY_CONF = '/etc/haproxy/haproxy.cfg'
 CEILOMETER_CONF_DIR = "/etc/ceilometer"
 CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
+CEILOMETER_PIPELINE_YAML = "%s/pipeline.yaml" % CEILOMETER_CONF_DIR
 CEILOMETER_API_SYSTEMD_CONF = (
     '/etc/systemd/system/ceilometer-api.service.d/override.conf'
 )
@@ -177,6 +179,10 @@ CONFIG_FILES = OrderedDict([
     (CEILOMETER_API_SYSTEMD_CONF, {
         'hook_contexts': [HAProxyContext()],
         'services': ['ceilometer-api'],
+    }),
+    (CEILOMETER_PIPELINE_YAML, {
+        'hook_contexts': [CeilometerPipelineContext()],
+        'services': ['ceilometer-collector'],
     }),
     (HAPROXY_CONF, {
         'hook_contexts': [context.HAProxyContext(singlenode_mode=True),
