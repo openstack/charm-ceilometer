@@ -48,6 +48,7 @@ TO_PATCH = [
     'apt_install',
     'apt_update',
     'open_port',
+    'close_port',
     'config',
     'log',
     'relation_ids',
@@ -69,6 +70,7 @@ TO_PATCH = [
     'init_is_systemd',
     'get_relation_ip',
     'is_clustered',
+    'get_os_codename_install_source',
 ]
 
 
@@ -82,6 +84,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.filter_installed_packages.return_value = \
             ceilometer_utils.CEILOMETER_BASE_PACKAGES
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}
+        self.get_os_codename_install_source.return_value = 'mitaka'
 
     @patch('charmhelpers.payload.execd.default_execd_dir',
            return_value=os.path.join(os.getcwd(), 'exec.d'))
@@ -99,7 +102,6 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/install.real'])
         self.configure_installation_source.\
             assert_called_with('cloud:precise-grizzly')
-        self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
         self.apt_update.assert_called_with(fatal=True)
         self.apt_install.assert_called_with(
             ceilometer_utils.CEILOMETER_BASE_PACKAGES,
@@ -114,7 +116,6 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/install.real'])
         self.configure_installation_source.\
             assert_called_with('distro')
-        self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
         self.apt_update.assert_called_with(fatal=True)
         self.apt_install.assert_called_with(
             ceilometer_utils.CEILOMETER_BASE_PACKAGES,
@@ -201,6 +202,25 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
+        self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
+
+    @patch.object(hooks, 'install_event_pipeline_setting')
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'ceilometer_joined')
+    def test_config_changed_queens(self,
+                                   joined, mock_config, event_pipe):
+        self.openstack_upgrade_available.return_value = False
+        self.get_os_codename_install_source.return_value = 'queens'
+        hooks.hooks.execute(['hooks/config-changed'])
+        self.openstack_upgrade_available.\
+            assert_called_with('ceilometer-common')
+        self.assertFalse(self.do_openstack_upgrade.called)
+        self.assertTrue(event_pipe.called)
+        self.assertTrue(self.CONFIGS.write_all.called)
+        self.assertTrue(joined.called)
+        self.assertTrue(self.reload_systemd.called)
+        self.close_port.assert_called_with(hooks.CEILOMETER_PORT)
+        self.open_port.assert_not_called()
 
     @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
@@ -216,6 +236,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
+        self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
 
     @patch.object(hooks, 'install_event_pipeline_setting')
     def test_config_changed_with_openstack_upgrade_action(self,
@@ -227,6 +248,14 @@ class CeilometerHooksTest(CharmTestCase):
 
         self.assertFalse(self.do_openstack_upgrade.called)
         self.assertTrue(event_pipe.called)
+        self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
+
+    def test_keystone_credentials_joined(self):
+        hooks.hooks.execute(['hooks/identity-credentials-relation-joined'])
+        self.relation_set.assert_called_with(
+            username=hooks.CEILOMETER_SERVICE,
+            requested_roles=hooks.CEILOMETER_ROLE,
+            relation_id=None)
 
     @patch.object(hooks, 'canonical_url')
     @patch('charmhelpers.core.hookenv.config')

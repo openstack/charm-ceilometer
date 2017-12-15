@@ -26,6 +26,7 @@ from charmhelpers.fetch import (
 )
 from charmhelpers.core.hookenv import (
     open_port,
+    close_port,
     relation_get,
     relation_set,
     relation_ids,
@@ -48,6 +49,8 @@ from charmhelpers.contrib.openstack.utils import (
     openstack_upgrade_available,
     pausable_restart_on_change as restart_on_change,
     is_unit_paused_set,
+    get_os_codename_install_source,
+    CompareOpenStackReleases,
 )
 from charmhelpers.contrib.openstack.ha.utils import (
     update_dns_ha_resource_params,
@@ -112,7 +115,6 @@ def install():
         status_set('maintenance', 'Installing packages')
         apt_update(fatal=True)
         apt_install(packages, fatal=True)
-    open_port(CEILOMETER_PORT)
     if init_is_systemd():
         # NOTE(jamespage): ensure systemd override folder exists prior to
         #                  attempting to write override.conf
@@ -146,6 +148,8 @@ def metric_service_joined():
             "shared-db-relation-departed",
             "identity-service-relation-changed",
             "identity-service-relation-departed",
+            "identity-credentials-relation-changed",
+            "identity-credentials-relation-departed",
             "metric-service-relation-changed",
             "metric-service-relation-departed")
 @restart_on_change(restart_map())
@@ -159,8 +163,13 @@ def any_changed():
     #                  and mongodb to be configured to successfully
     #                  upgrade the underlying data stores.
     if ('metric-service' in CONFIGS.complete_contexts() and
-            'identity-service' in CONFIGS.complete_contexts() and
-            'mongodb' in CONFIGS.complete_contexts()):
+            'identity-service' in CONFIGS.complete_contexts()):
+        cmp_codename = CompareOpenStackReleases(
+            get_os_codename_install_source(config('openstack-origin')))
+        # NOTE(jamespage): however at queens, this limitation has gone!
+        if (cmp_codename < 'queens' and
+                'mongodb' not in CONFIGS.complete_contexts()):
+            return
         ceilometer_upgrade()
 
 
@@ -168,6 +177,10 @@ def configure_https():
     """Enables SSL API Apache config if appropriate."""
     # need to write all to ensure changes to the entire request pipeline
     # propagate (c-api, haprxy, apache)
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'queens':
+        return
     CONFIGS.write_all()
     if 'https' in CONFIGS.complete_contexts():
         cmd = ['a2ensite', 'openstack_https_frontend']
@@ -200,9 +213,23 @@ def config_changed():
     #                  reload ensures port override is set correctly
     reload_systemd()
     ceilometer_joined()
+
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename < 'queens':
+        open_port(CEILOMETER_PORT)
+    else:
+        close_port(CEILOMETER_PORT)
+
     configure_https()
+
+    # NOTE(jamespage): Iterate identity-{service,credentials} relations
+    #                  to pickup any required databag changes on these
+    #                  relations.
     for rid in relation_ids('identity-service'):
         keystone_joined(relid=rid)
+    for rid in relation_ids('identity-credentials'):
+        keystone_credentials_joined(relid=rid)
 
     # Define the new ocf resource and use the key delete_resources to delete
     # legacy resource for >= Liberty since the ceilometer-agent-central moved
@@ -350,8 +377,21 @@ def ha_changed():
             keystone_joined(relid=rid)
 
 
+@hooks.hook("identity-credentials-relation-joined")
+def keystone_credentials_joined(relid=None):
+    relation_set(relation_id=relid,
+                 username=CEILOMETER_SERVICE,
+                 requested_roles=CEILOMETER_ROLE)
+
+
 @hooks.hook("identity-service-relation-joined")
 def keystone_joined(relid=None):
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'queens':
+        log('Skipping endpoint registration for >= Queens', level=DEBUG)
+        return
+
     if config('vip') and not is_clustered():
         log('Defering registration until clustered', level=DEBUG)
         return

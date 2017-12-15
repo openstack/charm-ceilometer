@@ -69,6 +69,11 @@ CEILOMETER_BASE_SERVICES = [
     'ceilometer-api',
 ]
 
+QUEENS_SERVICES = [
+    'ceilometer-agent-central',
+    'ceilometer-agent-notification'
+]
+
 ICEHOUSE_SERVICES = [
     'ceilometer-alarm-notifier',
     'ceilometer-alarm-evaluator',
@@ -101,6 +106,11 @@ MITAKA_PACKAGES = [
     'ceilometer-agent-notification'
 ]
 
+QUEENS_PACKAGES = [
+    'ceilometer-agent-central',
+    'ceilometer-agent-notification'
+]
+
 REQUIRED_INTERFACES = {
     'database': ['mongodb'],
     'messaging': ['amqp'],
@@ -111,6 +121,23 @@ CEILOMETER_ROLE = "ResellerAdmin"
 SVC = 'ceilometer'
 WSGI_CEILOMETER_API_CONF = '/etc/apache2/sites-enabled/wsgi-openstack-api.conf'
 PACKAGE_CEILOMETER_API_CONF = '/etc/apache2/sites-enabled/ceilometer-api.conf'
+
+QUEENS_CONFIG_FILES = OrderedDict([
+    (CEILOMETER_CONF, {
+        'hook_contexts': [
+            context.IdentityCredentialsContext(service=SVC,
+                                               service_user=SVC),
+            context.AMQPContext(ssl_dir=CEILOMETER_CONF_DIR),
+            LoggingConfigContext(),
+            MongoDBContext(),
+            CeilometerContext(),
+            context.SyslogContext(),
+            context.MemcacheContext(),
+            MetricServiceContext(),
+            context.WorkerConfigContext()],
+        'services': QUEENS_SERVICES
+    }),
+])
 
 CONFIG_FILES = OrderedDict([
     (CEILOMETER_CONF, {
@@ -124,7 +151,8 @@ CONFIG_FILES = OrderedDict([
                           context.SyslogContext(),
                           HAProxyContext(),
                           context.MemcacheContext(),
-                          MetricServiceContext()],
+                          MetricServiceContext(),
+                          context.WorkerConfigContext()],
         'services': CEILOMETER_BASE_SERVICES
     }),
     (CEILOMETER_API_SYSTEMD_CONF, {
@@ -165,36 +193,46 @@ def register_configs():
     # if called without anything installed (eg during install hook)
     # just default to earliest supported release. configs dont get touched
     # till post-install, anyway.
+
     release = (get_os_codename_package('ceilometer-common', fatal=False) or
                'grizzly')
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
-
-    for conf in (CEILOMETER_CONF, HAPROXY_CONF):
-        configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
-
-    if init_is_systemd():
-        configs.register(
-            CEILOMETER_API_SYSTEMD_CONF,
-            CONFIG_FILES[CEILOMETER_API_SYSTEMD_CONF]['hook_contexts']
-        )
-
-    if os.path.exists('/etc/apache2/conf-available'):
-        configs.register(HTTPS_APACHE_24_CONF,
-                         CONFIG_FILES[HTTPS_APACHE_24_CONF]['hook_contexts'])
+    if CompareOpenStackReleases(release) >= 'queens':
+        for conf in QUEENS_CONFIG_FILES:
+            configs.register(conf, QUEENS_CONFIG_FILES[conf]['hook_contexts'])
     else:
-        configs.register(HTTPS_APACHE_CONF,
-                         CONFIG_FILES[HTTPS_APACHE_CONF]['hook_contexts'])
-    if enable_memcache(release=release):
-        configs.register(MEMCACHED_CONF, [context.MemcacheContext()])
+        for conf in (CEILOMETER_CONF, HAPROXY_CONF):
+            configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
 
-    if run_in_apache():
-        wsgi_script = "/usr/share/ceilometer/app.wsgi"
-        configs.register(WSGI_CEILOMETER_API_CONF,
-                         [context.WSGIWorkerConfigContext(name="ceilometer",
-                                                          script=wsgi_script),
-                          CeilometerContext(),
-                          HAProxyContext()])
+        if init_is_systemd():
+            configs.register(
+                CEILOMETER_API_SYSTEMD_CONF,
+                CONFIG_FILES[CEILOMETER_API_SYSTEMD_CONF]['hook_contexts']
+            )
+
+        if os.path.exists('/etc/apache2/conf-available'):
+            configs.register(
+                HTTPS_APACHE_24_CONF,
+                CONFIG_FILES[HTTPS_APACHE_24_CONF]['hook_contexts']
+            )
+        else:
+            configs.register(
+                HTTPS_APACHE_CONF,
+                CONFIG_FILES[HTTPS_APACHE_CONF]['hook_contexts']
+            )
+        if enable_memcache(release=release):
+            configs.register(MEMCACHED_CONF, [context.MemcacheContext()])
+
+        if run_in_apache():
+            wsgi_script = "/usr/share/ceilometer/app.wsgi"
+            configs.register(
+                WSGI_CEILOMETER_API_CONF,
+                [context.WSGIWorkerConfigContext(name="ceilometer",
+                                                 script=wsgi_script),
+                 CeilometerContext(),
+                 HAProxyContext()]
+            )
     return configs
 
 
@@ -206,8 +244,14 @@ def restart_map():
     :returns: dict: A dictionary mapping config file to lists of services
                     that should be restarted when file changes.
     """
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'queens':
+        _config_files = QUEENS_CONFIG_FILES
+    else:
+        _config_files = CONFIG_FILES
     _map = {}
-    for f, ctxt in CONFIG_FILES.iteritems():
+    for f, ctxt in _config_files.items():
         svcs = []
         for svc in ctxt['services']:
             svcs.append(svc)
@@ -217,10 +261,11 @@ def restart_map():
         if svcs:
             _map[f] = svcs
 
-    if enable_memcache(source=config('openstack-origin')):
+    if (cmp_codename < 'queens' and
+            enable_memcache(source=config('openstack-origin'))):
         _map[MEMCACHED_CONF] = ['memcached']
 
-    if run_in_apache():
+    if cmp_codename < 'queens' and run_in_apache():
         for cfile in _map:
             svcs = _map[cfile]
             if 'ceilometer-api' in svcs:
@@ -254,14 +299,24 @@ def determine_ports():
     """
     # TODO(ajkavanagh) - determine what other ports the service listens on
     # apart from the main CEILOMETER port
-    ports = [CEILOMETER_PORT]
-    return ports
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'queens':
+        # NOTE(jamespage): No API service for queens or later
+        return []
+    return [CEILOMETER_PORT]
 
 
 def get_ceilometer_context():
     """ Retrieve a map of all current relation data for agent configuration """
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'queens':
+        _config_files = QUEENS_CONFIG_FILES
+    else:
+        _config_files = CONFIG_FILES
     ctxt = {}
-    for hcontext in CONFIG_FILES[CEILOMETER_CONF]['hook_contexts']:
+    for hcontext in _config_files[CEILOMETER_CONF]['hook_contexts']:
         ctxt.update(hcontext())
     return ctxt
 
@@ -301,9 +356,9 @@ def do_openstack_upgrade(configs):
 def ceilometer_release_services():
     cmp_codename = CompareOpenStackReleases(
         get_os_codename_install_source(config('openstack-origin')))
-    if cmp_codename >= 'mitaka':
+    if cmp_codename >= 'mitaka' and cmp_codename < 'queens':
         return MITAKA_SERVICES
-    elif cmp_codename >= 'icehouse':
+    elif cmp_codename >= 'icehouse' and cmp_codename < 'mitaka':
         return ICEHOUSE_SERVICES
     else:
         return []
@@ -312,7 +367,7 @@ def ceilometer_release_services():
 def ceilometer_release_packages():
     cmp_codename = CompareOpenStackReleases(
         get_os_codename_install_source(config('openstack-origin')))
-    if cmp_codename >= 'mitaka':
+    if cmp_codename >= 'mitaka' and cmp_codename < 'queens':
         return MITAKA_PACKAGES
     elif cmp_codename >= 'icehouse':
         return ICEHOUSE_PACKAGES
@@ -321,6 +376,14 @@ def ceilometer_release_packages():
 
 
 def get_packages():
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+
+    # NOTE(jamespage): @queens ceilometer has no API service, so
+    #                  no requirement for token caching.
+    if cmp_codename >= 'queens':
+        return deepcopy(QUEENS_PACKAGES)
+
     packages = (deepcopy(CEILOMETER_BASE_PACKAGES) +
                 ceilometer_release_packages())
     packages.extend(token_cache_pkgs(source=config('openstack-origin')))
@@ -378,6 +441,9 @@ def resolve_required_interfaces():
     required_ints = deepcopy(REQUIRED_INTERFACES)
     if CompareOpenStackReleases(os_release('ceilometer-common')) >= 'mitaka':
         required_ints['database'].append('metric-service')
+    if CompareOpenStackReleases(os_release('ceilometer-common')) >= 'queens':
+        required_ints['database'].remove('mongodb')
+        required_ints['identity'] = ['identity-credentials']
     return required_ints
 
 
@@ -446,7 +512,8 @@ def run_in_apache():
     """Return true if ceilometer API is run under apache2 with mod_wsgi in
     this release.
     """
-    return CompareOpenStackReleases(os_release('ceilometer-common')) >= 'ocata'
+    os_cmp = CompareOpenStackReleases(os_release('ceilometer-common'))
+    return (os_cmp >= 'ocata' and os_cmp < 'queens')
 
 
 def disable_package_apache_site():

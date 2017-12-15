@@ -16,7 +16,7 @@ from charmhelpers.core.hookenv import (
     relation_ids,
     relation_get,
     related_units,
-    config
+    config,
 )
 
 from charmhelpers.contrib.openstack.utils import (

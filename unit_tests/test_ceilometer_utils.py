@@ -47,6 +47,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def setUp(self):
         super(CeilometerUtilsTest, self).setUp(utils, TO_PATCH)
         self.config.side_effect = self.test_config.get
+        self.get_os_codename_install_source.return_value = 'icehouse'
 
     def tearDown(self):
         super(CeilometerUtilsTest, self).tearDown()
@@ -55,6 +56,7 @@ class CeilometerUtilsTest(CharmTestCase):
         self.os.path.exists.return_value = True
         self.init_is_systemd.return_value = False
         self.os_release.return_value = 'havana'
+        self.get_os_codename_package.return_value = 'havana'
         configs = utils.register_configs()
         calls = []
         for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
@@ -67,6 +69,7 @@ class CeilometerUtilsTest(CharmTestCase):
         self.os.path.exists.return_value = False
         self.init_is_systemd.return_value = False
         self.os_release.return_value = 'havana'
+        self.get_os_codename_package.return_value = 'havana'
         configs = utils.register_configs()
         calls = []
         for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
@@ -79,6 +82,7 @@ class CeilometerUtilsTest(CharmTestCase):
         self.os.path.exists.return_value = True
         self.init_is_systemd.return_value = True
         self.os_release.return_value = 'havana'
+        self.get_os_codename_package.return_value = 'havana'
         configs = utils.register_configs()
         calls = []
         for conf in (utils.CEILOMETER_CONF, utils.HAPROXY_CONF,
@@ -99,6 +103,12 @@ class CeilometerUtilsTest(CharmTestCase):
         """Ensure that mitaka specific services are identified"""
         self.get_os_codename_install_source.return_value = 'mitaka'
         self.assertEqual(['ceilometer-agent-notification'],
+                         utils.ceilometer_release_services())
+
+    def test_ceilometer_release_services_queens(self):
+        """Ensure that queens specific services are identified"""
+        self.get_os_codename_install_source.return_value = 'queens'
+        self.assertEqual([],
                          utils.ceilometer_release_services())
 
     def test_restart_map(self):
@@ -147,6 +157,20 @@ class CeilometerUtilsTest(CharmTestCase):
                  'ceilometer-api', 'apache2'],
              "/etc/apache2/sites-available/openstack_https_frontend.conf": [
                  'ceilometer-api', 'apache2']
+             }
+        )
+
+    def test_restart_map_queens(self):
+        """Ensure that alarming services are missing for OpenStack Queens"""
+        self.get_os_codename_install_source.return_value = 'queens'
+        self.os_release.return_value = 'queens'
+        self.maxDiff = None
+        restart_map = utils.restart_map()
+        self.assertEqual(
+            restart_map,
+            {'/etc/ceilometer/ceilometer.conf': [
+                'ceilometer-agent-central',
+                'ceilometer-agent-notification'],
              }
         )
 
@@ -269,6 +293,18 @@ class CeilometerUtilsTest(CharmTestCase):
                 'database': ['mongodb', 'metric-service'],
                 'messaging': ['amqp'],
                 'identity': ['identity-service'],
+            }
+        )
+
+    def test_resolve_required_interfaces_queens(self):
+        self.os_release.side_effect = None
+        self.os_release.return_value = 'queens'
+        self.assertEqual(
+            utils.resolve_required_interfaces(),
+            {
+                'database': ['metric-service'],
+                'messaging': ['amqp'],
+                'identity': ['identity-credentials'],
             }
         )
 

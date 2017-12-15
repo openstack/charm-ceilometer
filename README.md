@@ -17,17 +17,30 @@ default install Ceilometer and its dependencies from the Cloud Archive.
 Usage
 -----
 
-In order to deploy Ceilometer service, the MongoDB service is required:
+In order to deploy Ceilometer service (prior to Queens), the MongoDB
+service is required:
 
     juju deploy mongodb
     juju deploy ceilometer
     juju add-relation ceilometer mongodb
+
+For OpenStack Queens or later, Gnocchi should be used instead of MongoDB
+for resource, metrics and measure storage:
+
+    juju add-relation ceilometer gnocchi
 
 then Keystone and Rabbit relationships need to be established:
 
     juju add-relation ceilometer rabbitmq
     juju add-relation ceilometer keystone:identity-service
     juju add-relation ceilometer keystone:identity-notifications
+
+For OpenStack Queens, the identity-service relation must be replaced
+with the identity-credentials relation:
+
+    juju add-relation ceilometer keystone:identity-credentials
+
+Ceilometer@Queens does not provide an API service.
 
 In order to capture the calculations, a Ceilometer compute agent needs to be
 installed in each nova node, and be related with Ceilometer service:

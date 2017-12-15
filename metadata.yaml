@@ -36,6 +36,8 @@ requires:
     interface: keystone
   identity-notifications:
     interface: keystone-notifications
+  identity-credentials:
+    interface: keystone-credentials
   ha:
     interface: hacluster
     scope: container
