@@ -503,6 +503,9 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                                               'password':
                                                   ks_rel['service_password']}
 
+        if self._get_openstack_release() >= self.xenial_ocata:
+            del expected['api']
+
         for section, pairs in expected.iteritems():
             ret = u.validate_config_data(unit, conf, section, pairs)
             if ret:

@@ -103,7 +103,6 @@ class CeilometerContext(OSContextGenerator):
         ctxt = {
             'port': CEILOMETER_PORT,
             'metering_secret': get_shared_secret(),
-            'api_workers': config('api-workers'),
             'metering_time_to_live': int(config('metering-time-to-live')),
             'event_time_to_live': int(config('event-time-to-live')),
         }

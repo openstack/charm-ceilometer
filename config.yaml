@@ -71,11 +71,15 @@ options:
     type: string
     default: openstack
     description: RabbitMQ virtual host to request access on rabbitmq-server.
-  api-workers:
-    type: int
-    default: 1
+  worker-multiplier:
+    type: float
+    default:
     description: |
-      Number of workers for Ceilometer API server. (>= Kilo).
+      The CPU core multiplier to use when configuring worker processes for
+      this service. By default, the number of workers for each daemon is set
+      to twice the number of CPU cores a service unit has. When deployed in a
+      LXD container, this default value will be capped to 4 workers unless this
+      configuration option is set.
   # Monitoring config
   nagios_context:
     type: string
