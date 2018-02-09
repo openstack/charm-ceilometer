@@ -144,7 +144,7 @@ CONFIG_FILES = OrderedDict([
         'hook_contexts': [context.IdentityServiceContext(service=SVC,
                                                          service_user=SVC),
                           context.AMQPContext(ssl_dir=CEILOMETER_CONF_DIR),
-                          context.InternalEndpointContext('ceilometer-common'),
+                          context.InternalEndpointContext(),
                           LoggingConfigContext(),
                           MongoDBContext(),
                           CeilometerContext(),
