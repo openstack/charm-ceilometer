@@ -129,7 +129,6 @@ class CeilometerContextsTest(CharmTestCase):
         self.assertEqual(contexts.CeilometerContext()(), {
             'port': 8777,
             'metering_secret': 'mysecret',
-            'api_workers': 1,
             'metering_time_to_live': -1,
             'event_time_to_live': -1,
         })
@@ -143,7 +142,6 @@ class CeilometerContextsTest(CharmTestCase):
         self.assertEqual(context, {
             'port': 8777,
             'metering_secret': 'mysecret',
-            'api_workers': 1,
             'metering_time_to_live': 7776000,
             'event_time_to_live': 7776000,
         })
