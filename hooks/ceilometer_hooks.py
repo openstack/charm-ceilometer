@@ -159,13 +159,17 @@ def any_changed():
     for rid in relation_ids('identity-service'):
         keystone_joined(relid=rid)
     ceilometer_joined()
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename < 'queens':
+        identity_relation = 'identity-service'
+    else:
+        identity_relation = 'identity-credentials'
     # NOTE(jamespage): ceilometer@ocata requires both gnocchi
     #                  and mongodb to be configured to successfully
     #                  upgrade the underlying data stores.
     if ('metric-service' in CONFIGS.complete_contexts() and
-            'identity-service' in CONFIGS.complete_contexts()):
-        cmp_codename = CompareOpenStackReleases(
-            get_os_codename_install_source(config('openstack-origin')))
+            identity_relation in CONFIGS.complete_contexts()):
         # NOTE(jamespage): however at queens, this limitation has gone!
         if (cmp_codename < 'queens' and
                 'mongodb' not in CONFIGS.complete_contexts()):

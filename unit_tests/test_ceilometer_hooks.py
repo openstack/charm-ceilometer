@@ -158,6 +158,25 @@ class CeilometerHooksTest(CharmTestCase):
     @patch.object(hooks, 'keystone_joined')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
+    def test_any_changed_queens(self, ceilometer_joined, mock_config,
+                                keystone_joined, ceilometer_upgrade):
+        self.get_os_codename_install_source.return_value = 'queens'
+        self.CONFIGS.complete_contexts.return_value = [
+            'metric-service',
+            'identity-credentials',
+        ]
+        self.relation_ids.return_value = []
+        hooks.hooks.execute(['hooks/shared-db-relation-changed'])
+        self.CONFIGS.write_all.assert_called_once()
+        ceilometer_joined.assert_called_once()
+        keystone_joined.assert_not_called()
+        ceilometer_upgrade.assert_called_once()
+        self.configure_https.assert_called_once()
+
+    @patch.object(hooks, 'ceilometer_upgrade')
+    @patch.object(hooks, 'keystone_joined')
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'ceilometer_joined')
     def test_any_changed(self, ceilometer_joined, mock_config,
                          keystone_joined, ceilometer_upgrade):
         self.relation_ids.return_value = ['identity-service:1']
