@@ -524,7 +524,7 @@ def disable_package_apache_site():
         subprocess.check_call(['a2dissite', 'ceilometer-api'])
 
 
-@retry_on_exception(5, exc_type=subprocess.CalledProcessError)
+@retry_on_exception(5, base_delay=60, exc_type=subprocess.CalledProcessError)
 def ceilometer_upgrade():
     """Execute ceilometer-upgrade command, with retry on failure if gnocchi
     API is not ready for requests"""
