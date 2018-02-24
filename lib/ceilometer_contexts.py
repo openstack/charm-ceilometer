@@ -77,7 +77,7 @@ class MongoDBContext(OSContextGenerator):
 
                 mongo_servers.append('{}:{}'.format(host, port))
 
-        if mongo_servers:
+        if mongo_servers and replset:
             return {
                 'db_mongo_servers': ','.join(mongo_servers),
                 'db_name': CEILOMETER_DB,
