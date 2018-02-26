@@ -393,6 +393,9 @@ def keystone_joined(relid=None):
     cmp_codename = CompareOpenStackReleases(
         get_os_codename_install_source(config('openstack-origin')))
     if cmp_codename >= 'queens':
+        log("For OpenStack version Queens and onwards Ceilometer Charm "
+            "requires the 'identity-credentials' relation to Keystone, not "
+            "the 'identity-service' relation.", level=WARNING)
         log('Skipping endpoint registration for >= Queens', level=DEBUG)
         return
 
