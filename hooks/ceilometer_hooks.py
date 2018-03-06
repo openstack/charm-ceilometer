@@ -56,6 +56,9 @@ from charmhelpers.contrib.openstack.ha.utils import (
     update_dns_ha_resource_params,
 )
 from ceilometer_utils import (
+    ApacheSSLContext,
+)
+from ceilometer_utils import (
     disable_package_apache_site,
     get_packages,
     CEILOMETER_DB,
@@ -184,6 +187,8 @@ def configure_https():
     cmp_codename = CompareOpenStackReleases(
         get_os_codename_install_source(config('openstack-origin')))
     if cmp_codename >= 'queens':
+        ssl = ApacheSSLContext()
+        ssl.configure_ca()
         return
     CONFIGS.write_all()
     if 'https' in CONFIGS.complete_contexts():
