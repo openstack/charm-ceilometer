@@ -69,7 +69,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             {'name': 'ceilometer-agent'},
             {'name': 'nova-compute'}
         ]
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             other_services.extend([
                 {'name': 'gnocchi'},
                 {'name': 'memcached', 'location': 'cs:memcached'},
@@ -101,12 +101,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'glance:amqp': 'rabbitmq-server:amqp',
             'nova-compute:image-service': 'glance:image-service'
         }
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             additional_relations = {
-                'ceilometer:identity-credentials': 'keystone:'
-                                                   'identity-credentials',
-                'ceilometer:identity-notifications': 'keystone:'
-                                                     'identity-notifications',
                 'ceilometer:metric-service': 'gnocchi:metric-service',
                 'ceph-mon:osd': 'ceph-osd:mon',
                 'gnocchi:identity-service': 'keystone:identity-service',
@@ -114,12 +110,19 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'gnocchi:storage-ceph': 'ceph-mon:client',
                 'gnocchi:coordinator-memcached': 'memcached:cache',
             }
+
+            if self._get_openstack_release() >= self.xenial_queens:
+                identity_relations = {'ceilometer:identity-credentials':
+                                      'keystone:identity-credentials'}
+            else:
+                identity_relations = {'ceilometer:identity-service':
+                                      'keystone:identity-service'}
+            additional_relations.update(identity_relations)
         else:
             additional_relations = {
                 'ceilometer:shared-db': 'mongodb:database',
                 'ceilometer:identity-service': 'keystone:identity-service'}
         relations.update(additional_relations)
-        print(relations)
         super(CeilometerBasicDeployment, self)._add_relations(relations)
 
     def _configure_services(self):
@@ -136,7 +139,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'keystone': keystone_config,
             'percona-cluster': pxc_config,
         }
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             configs['ceph-osd'] = {'osd-devices': '/dev/vdb',
                                    'osd-reformat': 'yes',
                                    'ephemeral-unmount': '/mnt'}
@@ -154,7 +157,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         self.keystone_sentry = self.d.sentry['keystone'][0]
         self.rabbitmq_sentry = self.d.sentry['rabbitmq-server'][0]
         self.nova_sentry = self.d.sentry['nova-compute'][0]
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             self.gnocchi_sentry = self.d.sentry['gnocchi'][0]
         else:
             self.mongodb_sentry = self.d.sentry['mongodb'][0]
@@ -169,7 +172,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             openstack_release=self._get_openstack_release())
 
         self.log.debug('Instantiating ceilometer client...')
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             self.ceil = ceilo_client.Client(session=self.keystone_session,)
         else:
             # Authenticate admin with ceilometer endpoint
@@ -187,10 +190,10 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'ceilometer-agent-central',
             'ceilometer-agent-notification',
         ]
-        if release < self.xenial_queens:
+        if release < self.xenial_pike:
             ceilometer_svcs.append('ceilometer-collector')
 
-        if (release >= self.xenial_ocata and release < self.xenial_queens):
+        if (release >= self.xenial_ocata and release < self.xenial_pike):
             ceilometer_svcs.append('apache2')
 
         if release < self.xenial_ocata:
@@ -211,7 +214,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         u.log.debug('OK')
 
     def test_105_memcache(self):
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             u.log.debug('Skipping memcache test as memcache server is external'
                         ' to ceilometer')
             return
@@ -222,7 +225,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_110_service_catalog(self):
         """Verify that the service catalog endpoint data is valid."""
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             u.log.debug('Skipping catalogue checks as ceilometer no longer '
                         'registers endpoints')
             return
@@ -251,7 +254,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_112_keystone_api_endpoint(self):
         """Verify the ceilometer api endpoint data."""
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             u.log.debug('Skipping catalogue checks as ceilometer no longer '
                         'registers endpoints')
             return
@@ -282,7 +285,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_114_ceilometer_api_endpoint(self):
         """Verify the ceilometer api endpoint data."""
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             u.log.debug('Skipping catalogue checks as ceilometer no longer '
                         'registers endpoints')
             return
@@ -307,7 +310,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_200_ceilometer_identity_relation(self):
         """Verify the ceilometer to keystone identity-service relation data"""
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             u.log.debug('Skipping identity-service checks as ceilometer no '
                         'longer has this rerlation')
             return
@@ -338,7 +341,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_201_keystone_ceilometer_identity_relation(self):
         """Verify the keystone to ceilometer identity-service relation data"""
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             u.log.debug('Skipping identity-service checks as ceilometer no '
                         'longer has this rerlation')
             return
@@ -450,9 +453,10 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'rabbitmq_password': u.not_null,
             'port': '8767'
         }
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             expected['gnocchi_url'] = u.valid_url
-            expected['port'] = '8777'
+            if self._get_openstack_release() >= self.xenial_queens:
+                expected['port'] = '8777'
         else:
             expected['db_port'] = '27017'
             expected['db_name'] = 'ceilometer'
@@ -495,15 +499,21 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'port': '8767',
             },
         }
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             relation = self.gnocchi_sentry.relation(
                 'metric-service',
                 'ceilometer:metric-service')
             expected['dispatcher_gnocchi'] = {'url': relation['gnocchi_url']}
-            ks_rel = self.keystone_sentry.relation(
-                'identity-credentials',
-                'ceilometer:identity-credentials')
-            ks_key_prefix = 'credentials'
+            if self._get_openstack_release() >= self.xenial_queens:
+                ks_rel = self.keystone_sentry.relation(
+                    'identity-credentials',
+                    'ceilometer:identity-credentials')
+                ks_key_prefix = 'credentials'
+            else:
+                ks_rel = self.keystone_sentry.relation(
+                    'identity-service',
+                    'ceilometer:identity-service')
+                ks_key_prefix = 'service'
         else:
             db_relation = self.mongodb_sentry.relation('database',
                                                        'ceilometer:shared-db')
@@ -565,7 +575,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
     def test_400_api_connection(self):
         """Simple api calls to check service is up and responding"""
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             u.log.debug('Skipping API checks as ceilometer api has been '
                         'removed')
             return
@@ -590,7 +600,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         # Services which are expected to restart upon config change,
         # and corresponding config files affected by the change
         conf_file = '/etc/ceilometer/ceilometer.conf'
-        if self._get_openstack_release() >= self.xenial_queens:
+        if self._get_openstack_release() >= self.xenial_pike:
             services = {
                 'ceilometer-polling: AgentManager worker(0)': conf_file,
                 'ceilometer-agent-notification: NotificationService worker(0)':
@@ -673,4 +683,16 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         action_id = unit.run_action("resume")
         assert u.wait_on_action(action_id), "Resume action failed."
         assert u.status_get(unit)[0] == "active"
+        u.log.debug('OK')
+
+    def test_920_ceilometer_upgrade(self):
+        """Run ceilometer-upgrade"""
+        if self._get_openstack_release() < self.xenial_pike:
+            u.log.debug('Not checking ceilometer-upgrade')
+            return
+        u.log.debug('Checking ceilometer-upgrade')
+        unit = self.ceil_sentry
+
+        action_id = unit.run_action("ceilometer-upgrade")
+        assert u.wait_on_action(action_id), "ceilometer-upgrade action failed"
         u.log.debug('OK')

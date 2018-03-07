@@ -15,6 +15,7 @@
 import os
 import uuid
 import subprocess
+import traceback
 
 from collections import OrderedDict
 
@@ -45,10 +46,14 @@ from charmhelpers.contrib.openstack.utils import (
     CompareOpenStackReleases,
     reset_os_release,
 )
-from charmhelpers.core.hookenv import config, log, is_leader
+from charmhelpers.core.hookenv import (
+    config,
+    is_leader,
+    log,
+    DEBUG,
+)
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
 from charmhelpers.core.host import init_is_systemd
-from charmhelpers.core.decorators import retry_on_exception
 from copy import deepcopy
 
 HAPROXY_CONF = '/etc/haproxy/haproxy.cfg'
@@ -524,14 +529,63 @@ def disable_package_apache_site():
         subprocess.check_call(['a2dissite', 'ceilometer-api'])
 
 
-@retry_on_exception(5, base_delay=60, exc_type=subprocess.CalledProcessError)
-def ceilometer_upgrade():
+class FailedAction(Exception):
+    """
+    A custom error to inform the caller that the action has failed.
+    Provides message, output and traceback.
+    """
+
+    def __init__(self, message, outcome=None, trace=None):
+        self.outcome = outcome
+        self.trace = trace
+        super(FailedAction, self).__init__(message)
+
+
+def ceilometer_upgrade_helper(CONFIGS):
+    """Helper function to run ceilomter-upgrde, and then call assess_status(...) in
+    effect, so that the status is correctly updated.
+    Uses ceilomter_upgrde to do the work.
+
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename < 'queens':
+        identity_relation = 'identity-service'
+    else:
+        identity_relation = 'identity-credentials'
+    # NOTE(jamespage): ceilometer@ocata requires both gnocchi
+    #                  and mongodb to be configured to successfully
+    #                  upgrade the underlying data stores.
+    if ('metric-service' not in CONFIGS.complete_contexts() or
+            identity_relation not in CONFIGS.complete_contexts()):
+        raise FailedAction('The {} and or metric-service relations are not '
+                           'complete. ceilometer-upgrade cannot be run until '
+                           'they are ready.'.format(identity_relation))
+    # NOTE(jamespage): however at queens, this limitation has gone!
+    if (cmp_codename < 'pike' and
+            'mongodb' not in CONFIGS.complete_contexts()):
+        raise FailedAction('This version of ceilometer requires both gnocchi '
+                           'and mongodb. Mongodb relation incomplete.')
+    try:
+        ceilometer_upgrade(action=True)
+    except subprocess.CalledProcessError as e:
+        raise FailedAction('ceilometer-upgrade resulted in an '
+                           'unexpected error: {}'.format(e.message),
+                           outcome='ceilometer-upgrade failed, see traceback.',
+                           trace=traceback.format_exc())
+
+
+def ceilometer_upgrade(action=False):
     """Execute ceilometer-upgrade command, with retry on failure if gnocchi
     API is not ready for requests"""
-    if is_leader():
+    if is_leader() or action:
         if (CompareOpenStackReleases(os_release('ceilometer-common')) >=
                 'newton'):
             cmd = ['ceilometer-upgrade']
         else:
             cmd = ['ceilometer-dbsync']
+        log("Running ceilomter-upgrade: {}".format(" ".join(cmd)), DEBUG)
         subprocess.check_call(cmd)
+        log("ceilometer-upgrade succeeded", DEBUG)

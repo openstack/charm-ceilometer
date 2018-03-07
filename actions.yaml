@@ -2,5 +2,9 @@ pause:
   description: Pause the Ceilometer unit.  This action will stop Ceilometer services.
 resume:
   descrpition: Resume the Ceilometer unit.  This action will start Ceilometer services.
+ceilometer-upgrade:
+  description: |
+    Perform ceilometer-upgrade. This action will upgrade Ceilometer data stores.
+    *Note* This action must be run post deployment when ceilometer is related to gnocchi.
 openstack-upgrade:
   description: Perform openstack upgrades. Config option action-managed-upgrade must be set to True.
