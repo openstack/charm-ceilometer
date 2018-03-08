@@ -17,11 +17,16 @@
 import os
 import sys
 
-from charmhelpers.core.hookenv import action_fail
+from charmhelpers.core.hookenv import (
+    action_fail,
+    action_set,
+)
 from ceilometer_utils import (
+    ceilometer_upgrade_helper,
     pause_unit_helper,
-    resume_unit_helper,
     register_configs,
+    resume_unit_helper,
+    FailedAction,
 )
 
 
@@ -40,9 +45,26 @@ def resume(args):
     resume_unit_helper(register_configs())
 
 
+def ceilometer_upgrade(args):
+    """Run ceilometer-upgrade
+
+    @raises Exception if the ceilometer-upgrade fails.
+    """
+    try:
+        ceilometer_upgrade_helper(register_configs())
+        action_set({'outcome': 'success, ceilometer-upgrade completed.'})
+    except FailedAction as e:
+        if e.outcome:
+            action_set({'outcome': e.outcome})
+        if e.trace:
+            action_set({'traceback': e.trace})
+        raise Exception(str(e.message))
+
+
 # A dictionary of all the defined actions to callables (which take
 # parsed arguments).
-ACTIONS = {"pause": pause, "resume": resume}
+ACTIONS = {"pause": pause, "resume": resume,
+           "ceilometer-upgrade": ceilometer_upgrade}
 
 
 def main(args):

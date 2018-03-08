@@ -327,3 +327,58 @@ class CeilometerUtilsTest(CharmTestCase):
         self.is_leader.return_value = False
         utils.ceilometer_upgrade()
         mock_subprocess.check_call.assert_not_called()
+
+    @patch.object(utils, 'ceilometer_upgrade')
+    @patch('charmhelpers.core.hookenv.config')
+    def test_ceilometer_upgrade_helper_with_metrics(self, mock_config,
+                                                    mock_ceilometer_upgrade):
+        self.get_os_codename_install_source.return_value = 'ocata'
+        self.CONFIGS = MagicMock()
+        self.CONFIGS.complete_contexts.return_value = [
+            'metric-service',
+            'identity-service',
+            'mongodb'
+        ]
+        utils.ceilometer_upgrade_helper(self.CONFIGS)
+        mock_ceilometer_upgrade.assert_called_once_with(action=True)
+
+    @patch.object(utils, 'ceilometer_upgrade')
+    @patch('charmhelpers.core.hookenv.config')
+    def test_ceilometer_upgrade_helper_queens(self, mock_config,
+                                              mock_ceilometer_upgrade):
+        self.get_os_codename_install_source.return_value = 'queens'
+        self.CONFIGS = MagicMock()
+        self.CONFIGS.complete_contexts.return_value = [
+            'metric-service',
+            'identity-credentials',
+        ]
+        utils.ceilometer_upgrade_helper(self.CONFIGS)
+        mock_ceilometer_upgrade.assert_called_once_with(action=True)
+
+    @patch.object(utils, 'ceilometer_upgrade')
+    @patch('charmhelpers.core.hookenv.config')
+    def test_ceilometer_upgrade_helper_incomplete(self, mock_config,
+                                                  mock_ceilometer_upgrade):
+        self.get_os_codename_install_source.return_value = 'ocata'
+        self.CONFIGS = MagicMock()
+        with self.assertRaises(utils.FailedAction):
+            utils.ceilometer_upgrade_helper(self.CONFIGS)
+        mock_ceilometer_upgrade.assert_not_called()
+
+    @patch.object(utils, 'subprocess')
+    @patch.object(utils, 'ceilometer_upgrade')
+    @patch('charmhelpers.core.hookenv.config')
+    def test_ceilometer_upgrade_helper_raise(self, mock_config,
+                                             mock_ceilometer_upgrade,
+                                             mock_subprocess):
+        self.get_os_codename_install_source.return_value = 'ocata'
+        self.CONFIGS = MagicMock()
+        self.CONFIGS.complete_contexts.return_value = [
+            'metric-service',
+            'identity-service',
+            'mongodb'
+        ]
+        mock_ceilometer_upgrade.side_effect = utils.FailedAction("message")
+        with self.assertRaises(utils.FailedAction):
+            utils.ceilometer_upgrade_helper(self.CONFIGS)
+        mock_ceilometer_upgrade.assert_called_once_with(action=True)
