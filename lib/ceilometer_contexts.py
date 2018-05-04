@@ -140,6 +140,26 @@ class HAProxyContext(OSContextGenerator):
         return ctxt
 
 
+class RemoteSinksContext(OSContextGenerator):
+    interfaces = ['event-service']
+
+    def __call__(self):
+        '''Generates context for remote sinks for Panko and other compatible
+        remote consumers of Ceilometer event data.
+        '''
+        ctxt = {}
+        if config('remote-sink'):
+            ctxt['remote_sinks'] = config('remote-sink').split(' ')
+        for relid in relation_ids('event-service'):
+            for unit in related_units(relid):
+                publisher = relation_get('publisher', unit=unit, rid=relid)
+                if publisher:
+                    if not ctxt.get('internal_sinks'):
+                        ctxt['internal_sinks'] = {}
+                    ctxt['internal_sinks'][unit.split('/')[0]] = publisher
+        return ctxt
+
+
 class ApacheSSLContext(SSLContext):
 
     external_ports = [CEILOMETER_PORT]

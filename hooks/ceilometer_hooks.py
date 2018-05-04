@@ -153,7 +153,9 @@ def metric_service_joined():
             "identity-credentials-relation-changed",
             "identity-credentials-relation-departed",
             "metric-service-relation-changed",
-            "metric-service-relation-departed")
+            "metric-service-relation-departed",
+            "event-service-relation-changed",
+            "event-service-relation-departed",)
 @restart_on_change(restart_map())
 def any_changed():
     CONFIGS.write_all()

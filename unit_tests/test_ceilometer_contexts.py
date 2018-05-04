@@ -193,3 +193,33 @@ class CeilometerContextsTest(CharmTestCase):
             'port': api_port
         }
         self.assertEqual(contexts.HAProxyContext()(), expected)
+
+    def test_remote_sink_context_no_config(self):
+        self.relation_ids.return_value = []
+        self.os_release.return_value = 'mitaka'
+        self.assertEqual(contexts.RemoteSinksContext()(), {})
+
+    def test_remote_sink_context_event_service_relation(self):
+        self.relation_ids.return_value = ['event-service:0']
+        self.related_units.return_value = ['panko/0']
+        self.os_release.return_value = 'mitaka'
+        data = {
+            'publisher': 'panko://'
+        }
+        self.test_relation.set(data)
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'internal_sinks': {'panko': 'panko://'}})
+
+    def test_remote_sink_context_with_single_config(self):
+        self.relation_ids.return_value = []
+        self.os_release.return_value = 'mitaka'
+        self.test_config.set('remote-sink', 'http://foo')
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'remote_sinks': ['http://foo']})
+
+    def test_remote_sink_context_with_multiple_config(self):
+        self.relation_ids.return_value = []
+        self.os_release.return_value = 'mitaka'
+        self.test_config.set('remote-sink', 'http://foo http://bar')
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'remote_sinks': ['http://foo', 'http://bar']})

@@ -43,6 +43,8 @@ requires:
     scope: container
   metric-service:
     interface: gnocchi
+  event-service:
+    interface: event-service
 peers:
   cluster:
     interface: ceilometer-ha
