@@ -39,6 +39,7 @@ TO_PATCH = [
     'os_release',
     'is_leader',
     'reset_os_release',
+    'relation_ids',
 ]
 
 
@@ -275,6 +276,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_resolve_required_interfaces(self):
         self.os_release.side_effect = None
         self.os_release.return_value = 'icehouse'
+        self.relation_ids.return_value = None
         self.assertEqual(
             utils.resolve_required_interfaces(),
             {
@@ -287,6 +289,7 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_resolve_required_interfaces_mitaka(self):
         self.os_release.side_effect = None
         self.os_release.return_value = 'mitaka'
+        self.relation_ids.return_value = None
         self.assertEqual(
             utils.resolve_required_interfaces(),
             {
@@ -299,12 +302,27 @@ class CeilometerUtilsTest(CharmTestCase):
     def test_resolve_required_interfaces_queens(self):
         self.os_release.side_effect = None
         self.os_release.return_value = 'queens'
+        self.relation_ids.return_value = None
         self.assertEqual(
             utils.resolve_required_interfaces(),
             {
                 'database': ['metric-service'],
                 'messaging': ['amqp'],
                 'identity': ['identity-credentials'],
+            }
+        )
+
+    def test_resolve_optional_interfaces(self):
+        self.os_release.side_effect = None
+        self.os_release.return_value = 'icehouse'
+        self.relation_ids.return_value = [0]
+        self.assertEqual(
+            utils.resolve_required_interfaces(),
+            {
+                'database': ['mongodb'],
+                'messaging': ['amqp'],
+                'identity': ['identity-service'],
+                'event-service': ['event-service'],
             }
         )
 

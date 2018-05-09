@@ -239,3 +239,13 @@ options:
       Openstack mostly defaults to using public endpoints for
       internal communication between services. If set to True this option
       will configure services to use internal endpoints where possible.
+  remote-sink:
+    type: string
+    default:
+    description: |
+      Space delimited list of remote consumers of Ceilometer event reporting
+      which reside outside of the deployed model. Only supported for Mitaka
+      and later clouds. e.g.
+      .
+      'udp://<host>:<port>/'
+      'prometheus://pushgateway-host:9091/metrics/job/openstack-telemetry'

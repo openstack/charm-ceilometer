@@ -31,6 +31,7 @@ from ceilometer_contexts import (
     HAProxyContext,
     MetricServiceContext,
     CEILOMETER_PORT,
+    RemoteSinksContext,
 )
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
@@ -51,6 +52,7 @@ from charmhelpers.core.hookenv import (
     is_leader,
     log,
     DEBUG,
+    relation_ids,
 )
 from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
 from charmhelpers.core.host import init_is_systemd
@@ -67,6 +69,7 @@ HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
     "openstack_https_frontend.conf"
 CLUSTER_RES = 'grp_ceilometer_vips'
 MEMCACHED_CONF = '/etc/memcached.conf'
+PIPELINE_CONF = '/etc/ceilometer/event_pipeline.yaml'
 
 CEILOMETER_BASE_SERVICES = [
     'ceilometer-agent-central',
@@ -242,6 +245,8 @@ def register_configs():
                  CeilometerContext(),
                  HAProxyContext()]
             )
+        if CompareOpenStackReleases(release) >= 'mitaka':
+            configs.register(PIPELINE_CONF, [RemoteSinksContext()])
     return configs
 
 
@@ -424,6 +429,17 @@ def set_shared_secret(secret):
         secret_file.write(secret)
 
 
+def get_optional_relations():
+    """Return a dictionary of optional relations.
+
+    @returns {relation: relation_name}
+    """
+    optional_interfaces = {}
+    if relation_ids('event-service'):
+        optional_interfaces['event-service'] = ['event-service']
+    return optional_interfaces
+
+
 def assess_status(configs):
     """Assess status of current unit
 
@@ -448,6 +464,7 @@ def resolve_required_interfaces():
     @returns dict - a dictionary keyed by high-level type of interfaces names
     """
     required_ints = deepcopy(REQUIRED_INTERFACES)
+    required_ints.update(get_optional_relations())
     if CompareOpenStackReleases(os_release('ceilometer-common')) >= 'mitaka':
         required_ints['database'].append('metric-service')
     if CompareOpenStackReleases(os_release('ceilometer-common')) >= 'queens':
