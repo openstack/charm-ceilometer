@@ -213,6 +213,7 @@ def register_configs():
     if CompareOpenStackReleases(release) >= 'queens':
         for conf in QUEENS_CONFIG_FILES:
             configs.register(conf, QUEENS_CONFIG_FILES[conf]['hook_contexts'])
+        configs.register(PIPELINE_CONF, [RemoteSinksContext()])
     else:
         for conf in (CEILOMETER_CONF, HAPROXY_CONF):
             configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])

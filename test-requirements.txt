@@ -25,3 +25,10 @@ distro-info
 # END: Amulet OpenStack Charm Helper Requirements
 # NOTE: workaround for 14.04 pip/tox
 pytz
+# Temporary fix to cmd2 dep issues:
+# Root of the issue is a release blunder by a upstream dependency:
+# python-cmd2/cmd2#421
+# Upstream has made the same change to global requirements here:
+# https://review.openstack.org/#/c/570811
+# We can remove this again as soon as changes propagate out to all dependencies.
+cmd2!=0.8.3,<0.9.0  # MIT
