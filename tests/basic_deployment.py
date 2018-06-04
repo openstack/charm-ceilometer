@@ -74,7 +74,8 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 {'name': 'gnocchi'},
                 {'name': 'memcached', 'location': 'cs:memcached'},
                 {'name': 'ceph-mon', 'units': 3},
-                {'name': 'ceph-osd', 'units': 3}])
+                {'name': 'ceph-osd', 'units': 3,
+                 'storage': {'osd-devices': 'cinder,10G'}}])
         else:
             other_services.append({
                 'name': 'mongodb',
@@ -139,10 +140,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'keystone': keystone_config,
             'percona-cluster': pxc_config,
         }
-        if self._get_openstack_release() >= self.xenial_pike:
-            configs['ceph-osd'] = {'osd-devices': '/dev/vdb',
-                                   'osd-reformat': True,
-                                   'ephemeral-unmount': '/mnt'}
         super(CeilometerBasicDeployment, self)._configure_services(configs)
 
     def _get_token(self):
