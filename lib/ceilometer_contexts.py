@@ -106,6 +106,8 @@ class CeilometerContext(OSContextGenerator):
             'metering_secret': get_shared_secret(),
             'metering_time_to_live': int(config('metering-time-to-live')),
             'event_time_to_live': int(config('event-time-to-live')),
+            'polling_interval': int(config('polling-interval')),
+            'enable_all_pollsters': config('enable-all-pollsters'),
         }
         return ctxt
 

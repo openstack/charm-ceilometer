@@ -71,6 +71,7 @@ HAPROXY_CONF = '/etc/haproxy/haproxy.cfg'
 CEILOMETER_CONF_DIR = "/etc/ceilometer"
 CEILOMETER_CONF = "%s/ceilometer.conf" % CEILOMETER_CONF_DIR
 CEILOMETER_PIPELINE_YAML = "%s/pipeline.yaml" % CEILOMETER_CONF_DIR
+POLLING_CONF = "%s/polling.yaml" % CEILOMETER_CONF_DIR
 CEILOMETER_API_SYSTEMD_CONF = (
     '/etc/systemd/system/ceilometer-api.service.d/override.conf'
 )
@@ -158,6 +159,11 @@ QUEENS_CONFIG_FILES = OrderedDict([
             MetricServiceContext(),
             context.WorkerConfigContext(),
             AMQPListenersContext(ssl_dir=CEILOMETER_CONF_DIR)],
+        'services': QUEENS_SERVICES
+    }),
+    (POLLING_CONF, {
+        'hook_contexts': [
+            CeilometerContext()],
         'services': QUEENS_SERVICES
     }),
 ])

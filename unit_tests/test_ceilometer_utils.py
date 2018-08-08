@@ -176,6 +176,9 @@ class CeilometerUtilsTest(CharmTestCase):
             {'/etc/ceilometer/ceilometer.conf': [
                 'ceilometer-agent-central',
                 'ceilometer-agent-notification'],
+             '/etc/ceilometer/polling.yaml': [
+                'ceilometer-agent-central',
+                'ceilometer-agent-notification'],
              }
         )
 
