@@ -21,8 +21,9 @@ import sys
 import os
 
 from charmhelpers.fetch import (
-    apt_install, filter_installed_packages,
-    apt_update
+    apt_install,
+    apt_update,
+    filter_installed_packages,
 )
 from charmhelpers.core.hookenv import (
     open_port,
@@ -140,8 +141,12 @@ def db_joined():
 def metric_service_joined():
     # NOTE(jamespage): gnocchiclient is required to support
     #                  the gnocchi event dispatcher
-    apt_install(filter_installed_packages(['python-gnocchiclient']),
-                fatal=True)
+    release = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    pkgs = ['python-gnocchiclient']
+    if release >= 'rocky':
+        pkgs = ['python3-gnocchiclient']
+    apt_install(filter_installed_packages(pkgs), fatal=True)
 
 
 @hooks.hook("amqp-relation-changed",

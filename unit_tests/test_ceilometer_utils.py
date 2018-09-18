@@ -211,6 +211,19 @@ class CeilometerUtilsTest(CharmTestCase):
         )
         self.reset_os_release.assert_called()
 
+    def test_determine_purge_packages(self):
+        'Ensure no packages are identified for purge prior to rocky'
+        self.get_os_codename_install_source.return_value = 'queens'
+        self.assertEqual(utils.determine_purge_packages(), [])
+
+    def test_determine_purge_packages_rocky(self):
+        'Ensure python packages are identified for purge at rocky'
+        self.get_os_codename_install_source.return_value = 'rocky'
+        self.assertEqual(utils.determine_purge_packages(),
+                         [p for p in utils.CEILOMETER_BASE_PACKAGES
+                          if p.startswith('python-')] +
+                         ['python-ceilometer', 'python-memcache'])
+
     def test_get_packages_icehouse(self):
         self.get_os_codename_install_source.return_value = 'icehouse'
         self.token_cache_pkgs.return_value = []
@@ -225,6 +238,19 @@ class CeilometerUtilsTest(CharmTestCase):
                          utils.CEILOMETER_BASE_PACKAGES +
                          utils.MITAKA_PACKAGES +
                          ['memcached'])
+
+    def test_get_packages_queens(self):
+        self.get_os_codename_install_source.return_value = 'queens'
+        self.token_cache_pkgs.return_value = []
+        self.assertEqual(utils.get_packages(),
+                         utils.QUEENS_PACKAGES)
+
+    def test_get_packages_rocky(self):
+        self.get_os_codename_install_source.return_value = 'rocky'
+        self.token_cache_pkgs.return_value = []
+        self.assertEqual(utils.get_packages(),
+                         utils.QUEENS_PACKAGES +
+                         ['python3-ceilometer'])
 
     def test_assess_status(self):
         with patch.object(utils, 'assess_status_func') as asf:
