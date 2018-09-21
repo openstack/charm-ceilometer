@@ -462,11 +462,22 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/ha-relation-changed'])
         self.assertEqual(mock_keystone_joined.call_count, 1)
 
-    def test_metric_service_joined(self):
+    def test_metric_service_joined_queens(self):
         self.filter_installed_packages.return_value = ['python-gnocchiclient']
+        self.get_os_codename_install_source.return_value = 'queens'
         hooks.hooks.execute(['hooks/metric-service-relation-joined'])
         self.filter_installed_packages.assert_called_with(
             ['python-gnocchiclient']
         )
         self.apt_install.assert_called_with(['python-gnocchiclient'],
+                                            fatal=True)
+
+    def test_metric_service_joined_rocky(self):
+        self.filter_installed_packages.return_value = ['python3-gnocchiclient']
+        self.get_os_codename_install_source.return_value = 'rocky'
+        hooks.hooks.execute(['hooks/metric-service-relation-joined'])
+        self.filter_installed_packages.assert_called_with(
+            ['python3-gnocchiclient']
+        )
+        self.apt_install.assert_called_with(['python3-gnocchiclient'],
                                             fatal=True)

@@ -54,7 +54,14 @@ from charmhelpers.core.hookenv import (
     DEBUG,
     relation_ids,
 )
-from charmhelpers.fetch import apt_update, apt_install, apt_upgrade
+from charmhelpers.fetch import (
+    apt_update,
+    apt_install,
+    apt_upgrade,
+    apt_purge,
+    apt_autoremove,
+    filter_missing_packages,
+)
 from charmhelpers.core.host import init_is_systemd
 from copy import deepcopy
 
@@ -102,6 +109,10 @@ CEILOMETER_BASE_PACKAGES = [
     'ceilometer-collector',
     'ceilometer-api',
     'python-pymongo',
+]
+
+PY3_PACKAGES = [
+    'python3-ceilometer',
 ]
 
 ICEHOUSE_PACKAGES = [
@@ -361,6 +372,11 @@ def do_openstack_upgrade(configs):
                 options=dpkg_opts,
                 fatal=True)
 
+    installed_packages = filter_missing_packages(determine_purge_packages())
+    if installed_packages:
+        apt_purge(installed_packages, fatal=True)
+        apt_autoremove(purge=True, fatal=True)
+
     # set CONFIGS to load templates from new release
     configs.set_release(openstack_release=new_os_rel)
 
@@ -397,12 +413,31 @@ def get_packages():
     # NOTE(jamespage): @queens ceilometer has no API service, so
     #                  no requirement for token caching.
     if cmp_codename >= 'queens':
-        return deepcopy(QUEENS_PACKAGES)
-
-    packages = (deepcopy(CEILOMETER_BASE_PACKAGES) +
-                ceilometer_release_packages())
-    packages.extend(token_cache_pkgs(source=config('openstack-origin')))
+        packages = deepcopy(QUEENS_PACKAGES)
+        if cmp_codename >= 'rocky':
+            packages.extend(PY3_PACKAGES)
+    else:
+        packages = (deepcopy(CEILOMETER_BASE_PACKAGES) +
+                    ceilometer_release_packages())
+        packages.extend(token_cache_pkgs(source=config('openstack-origin')))
     return packages
+
+
+def determine_purge_packages():
+    '''
+    Determine list of packages that where previously installed which are no
+    longer needed.
+
+    :returns: list of package names
+    '''
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'rocky':
+        pkgs = [p for p in CEILOMETER_BASE_PACKAGES if p.startswith('python-')]
+        pkgs.append('python-ceilometer')
+        pkgs.append('python-memcache')
+        return pkgs
+    return []
 
 
 def get_shared_secret():
