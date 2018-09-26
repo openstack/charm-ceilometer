@@ -52,6 +52,8 @@ from charmhelpers.contrib.openstack.utils import (
     is_unit_paused_set,
     get_os_codename_install_source,
     CompareOpenStackReleases,
+    series_upgrade_prepare,
+    series_upgrade_complete,
 )
 from charmhelpers.contrib.openstack.ha.utils import (
     update_dns_ha_resource_params,
@@ -76,6 +78,8 @@ from ceilometer_utils import (
     set_shared_secret,
     assess_status,
     reload_systemd,
+    pause_unit_helper,
+    resume_unit_helper,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -201,6 +205,12 @@ def configure_https():
 @restart_on_change(restart_map())
 @harden()
 def config_changed():
+    # if we are paused, delay doing any config changed hooks.
+    # It is forced on the resume.
+    if is_unit_paused_set():
+        log("Unit is pause or upgrading. Skipping config_changed", "WARN")
+        return
+
     if not config('action-managed-upgrade'):
         if openstack_upgrade_available('ceilometer-common'):
             status_set('maintenance', 'Upgrading to new OpenStack release')
@@ -467,6 +477,20 @@ def update_nrpe_config():
 @harden()
 def update_status():
     log('Updating status.')
+
+
+@hooks.hook('pre-series-upgrade')
+def pre_series_upgrade():
+    log("Running prepare series upgrade hook", "INFO")
+    series_upgrade_prepare(
+        pause_unit_helper, CONFIGS)
+
+
+@hooks.hook('post-series-upgrade')
+def post_series_upgrade():
+    log("Running complete series upgrade hook", "INFO")
+    series_upgrade_complete(
+        resume_unit_helper, CONFIGS)
 
 
 if __name__ == '__main__':
