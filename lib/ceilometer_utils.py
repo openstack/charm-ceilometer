@@ -33,6 +33,7 @@ from ceilometer_contexts import (
     MetricServiceContext,
     CEILOMETER_PORT,
     RemoteSinksContext,
+    AMQPListenersContext,
 )
 from charmhelpers.contrib.openstack.utils import (
     get_os_codename_package,
@@ -155,7 +156,8 @@ QUEENS_CONFIG_FILES = OrderedDict([
             context.SyslogContext(),
             context.MemcacheContext(),
             MetricServiceContext(),
-            context.WorkerConfigContext()],
+            context.WorkerConfigContext(),
+            AMQPListenersContext(ssl_dir=CEILOMETER_CONF_DIR)],
         'services': QUEENS_SERVICES
     }),
 ])

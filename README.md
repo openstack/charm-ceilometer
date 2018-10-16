@@ -36,7 +36,7 @@ must be run post deployment in order to update its data store in gnocchi.
 
 then Keystone and Rabbit relationships need to be established:
 
-    juju add-relation ceilometer rabbitmq
+    juju add-relation ceilometer:amqp rabbitmq
     juju add-relation ceilometer keystone:identity-service
     juju add-relation ceilometer keystone:identity-notifications
 
@@ -56,6 +56,14 @@ installed in each nova node, and be related with Ceilometer service:
 
 Ceilometer provides an API service that can be used to retrieve
 Openstack metrics.
+
+If ceilometer needs to listen to multiple message queues then use the amqp interface
+to relate ceilometer to the message broker that it should publish to and use the
+amqp-listener interface for all message brokers ceilometer should monitor.
+
+    juju add-relation ceilometer:amqp rabbitmq-central
+    juju add-relation ceilometer:amqp-listener rabbitmq-neutron
+    juju add-relation ceilometer:amqp-listener rabbitmq-nova-cell2
 
 HA/Clustering
 -------------

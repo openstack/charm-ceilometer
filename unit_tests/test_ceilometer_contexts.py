@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mock import patch
+from mock import patch, MagicMock
 
 import ceilometer_contexts as contexts
 import ceilometer_utils as utils
@@ -223,3 +223,53 @@ class CeilometerContextsTest(CharmTestCase):
         self.test_config.set('remote-sink', 'http://foo http://bar')
         self.assertEqual(contexts.RemoteSinksContext()(),
                          {'remote_sinks': ['http://foo', 'http://bar']})
+
+    @patch.object(contexts, 'AMQPContext')
+    def test_AMQPListenersContext(self, mock_AMQPContext):
+
+        def _context(ssl_dir, relation_id):
+            fake_context1 = MagicMock(
+                return_value={'transport_url': 'rabbit://rab1:1010/os'})
+            fake_context2 = MagicMock(
+                return_value={'other_setting': 'sss'})
+            fake_context3 = MagicMock(
+                return_value={'transport_url': 'rabbit://rab2:1010/os'})
+            rdata = {
+                'amqp-listener:23': fake_context1,
+                'amqp-listener:8': fake_context2,
+                'amqp:2': fake_context3}
+
+            return rdata[relation_id]
+
+        mock_AMQPContext.side_effect = _context
+
+        rids = {
+            'amqp-listener': ['amqp-listener:23', 'amqp-listener:8'],
+            'amqp': ['amqp:2']}
+        self.relation_ids.side_effect = lambda x: rids[x]
+        self.assertEqual(
+            contexts.AMQPListenersContext()(),
+            {'messaging_urls': [
+                'rabbit://rab1:1010/os',
+                'rabbit://rab2:1010/os']})
+
+    @patch.object(contexts, 'AMQPContext')
+    def test_AMQPListenersContext_no_transport_urls(self, mock_AMQPContext):
+
+        def _context(ssl_dir, relation_id):
+            fake_context1 = MagicMock(return_value={})
+            fake_context2 = MagicMock(return_value={})
+            fake_context3 = MagicMock(return_value={})
+            rdata = {
+                'amqp-listener:23': fake_context1,
+                'amqp-listener:8': fake_context2,
+                'amqp:2': fake_context3}
+            return rdata[relation_id]
+
+        mock_AMQPContext.side_effect = _context
+
+        rids = {
+            'amqp-listener': ['amqp-listener:23', 'amqp-listener:8'],
+            'amqp': ['amqp:2']}
+        self.relation_ids.side_effect = lambda x: rids[x]
+        self.assertEqual(contexts.AMQPListenersContext()(), {})

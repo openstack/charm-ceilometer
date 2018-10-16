@@ -32,6 +32,8 @@ requires:
     interface: mongodb
   amqp:
     interface: rabbitmq
+  amqp-listener:
+    interface: rabbitmq
   identity-service:
     interface: keystone
   identity-notifications:

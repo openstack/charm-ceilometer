@@ -130,6 +130,7 @@ def install():
         disable_package_apache_site()
 
 
+@hooks.hook("amqp-listener-relation-joined")
 @hooks.hook("amqp-relation-joined")
 def amqp_joined():
     relation_set(username=config('rabbit-user'),
@@ -155,6 +156,8 @@ def metric_service_joined():
 
 @hooks.hook("amqp-relation-changed",
             "amqp-relation-departed",
+            "amqp-listener-relation-changed",
+            "amqp-listener-relation-departed",
             "shared-db-relation-changed",
             "shared-db-relation-departed",
             "identity-service-relation-changed",

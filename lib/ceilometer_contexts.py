@@ -28,6 +28,7 @@ from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
     context_complete,
     ApacheSSLContext as SSLContext,
+    AMQPContext,
 )
 
 from charmhelpers.contrib.hahelpers.cluster import (
@@ -186,3 +187,22 @@ class MetricServiceContext(OSContextGenerator):
                     return {'gnocchi_url': gnocchi_url,
                             'archive_policy': config('gnocchi-archive-policy')}
         return {}
+
+
+class AMQPListenersContext(OSContextGenerator):
+    interfaces = ['amqp-listener']
+
+    def __init__(self, ssl_dir=None):
+        self.ssl_dir = ssl_dir
+
+    def __call__(self):
+        ctxt = {}
+        messaging_urls = []
+        relids = relation_ids('amqp-listener') + relation_ids('amqp')
+        for relid in relids:
+            amqp_ctxt = AMQPContext(ssl_dir=self.ssl_dir, relation_id=relid)()
+            if amqp_ctxt.get('transport_url'):
+                messaging_urls.append(amqp_ctxt['transport_url'])
+        if messaging_urls:
+            ctxt['messaging_urls'] = messaging_urls
+        return ctxt
