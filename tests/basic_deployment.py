@@ -557,14 +557,6 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'user_domain_name': user_domain_name,
                 'username': 'ceilometer',
                 'password': ks_rel['{}_password'.format(ks_key_prefix)]}
-            expected['keystone_authtoken'] = {
-                'auth_uri': auth_uri,
-                'auth_type': 'password',
-                'project_domain_name': project_domain_name,
-                'user_domain_name': user_domain_name,
-                'project_name': 'services',
-                'username': 'ceilometer',
-                'password': ks_rel['{}_password'.format(ks_key_prefix)]}
 
         if self._get_openstack_release() >= self.xenial_ocata:
             del expected['api']
