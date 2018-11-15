@@ -71,6 +71,8 @@ TO_PATCH = [
     'get_relation_ip',
     'is_clustered',
     'get_os_codename_install_source',
+    'services',
+    'remove_old_packages',
 ]
 
 
@@ -151,9 +153,22 @@ class CeilometerHooksTest(CharmTestCase):
     @patch.object(hooks, 'install')
     @patch.object(hooks, 'any_changed')
     def test_upgrade_charm(self, changed, install, mock_config):
+        self.remove_old_packages.return_value = False
         hooks.hooks.execute(['hooks/upgrade-charm'])
         self.assertTrue(changed.called)
         self.assertTrue(install.called)
+
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'install')
+    @patch.object(hooks, 'any_changed')
+    def test_upgrade_charm_purge(self, changed, install, mock_config):
+        self.remove_old_packages.return_value = True
+        self.services.return_value = ['ceilometer-important-service']
+        hooks.hooks.execute(['hooks/upgrade-charm'])
+        self.assertTrue(changed.called)
+        self.assertTrue(install.called)
+        self.service_restart.assert_called_once_with(
+            'ceilometer-important-service')
 
     @patch.object(hooks, 'any_changed')
     @patch('charmhelpers.core.hookenv.config')

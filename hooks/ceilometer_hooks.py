@@ -80,6 +80,7 @@ from ceilometer_utils import (
     reload_systemd,
     pause_unit_helper,
     resume_unit_helper,
+    remove_old_packages,
 )
 from ceilometer_contexts import CEILOMETER_PORT
 from charmhelpers.contrib.openstack.ip import (
@@ -262,6 +263,11 @@ def install_event_pipeline_setting():
 @harden()
 def upgrade_charm():
     install()
+    packages_removed = remove_old_packages()
+    if packages_removed and not is_unit_paused_set():
+        log("Package purge detected, restarting services", "INFO")
+        for s in services():
+            service_restart(s)
     update_nrpe_config()
     any_changed()
     for rid in relation_ids('cluster'):
