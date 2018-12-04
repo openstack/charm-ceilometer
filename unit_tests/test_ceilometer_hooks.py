@@ -63,7 +63,7 @@ TO_PATCH = [
     'peer_store',
     'configure_https',
     'status_set',
-    'update_dns_ha_resource_params',
+    'generate_ha_relation_data',
     'reload_systemd',
     'run_in_apache',
     'mkdir',
@@ -381,86 +381,11 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/cluster-relation-changed'])
         self.assertEqual(mock_set_secret.call_count, 0)
 
-    @patch('charmhelpers.core.hookenv.config')
-    @patch.object(hooks, 'get_hacluster_config')
-    @patch.object(hooks, 'get_iface_for_address')
-    @patch.object(hooks, 'get_netmask_for_address')
-    def test_ha_joined(self, mock_netmask, mock_iface, mock_cluster_config,
-                       mock_config):
-        mock_cluster_config.return_value = {'vip': '10.0.5.100',
-                                            'ha-bindiface': 'bnd0',
-                                            'ha-mcastport': 5802}
-        mock_iface.return_value = 'eth0'
-        mock_netmask.return_value = '255.255.255.10'
+    def test_ha_relation_joined(self):
+        self.generate_ha_relation_data.return_value = {'rel_data': 'data'}
         hooks.hooks.execute(['hooks/ha-relation-joined'])
-        self.assertEqual(self.relation_set.call_count, 2)
-
-        exp_resources = {
-            'res_ceilometer_haproxy': 'lsb:haproxy',
-            'res_ceilometer_agent_central': 'lsb:ceilometer-agent-central',
-            'res_ceilometer_eth0_vip': 'ocf:heartbeat:IPaddr2'
-        }
-        exp_resource_params = {
-            'res_ceilometer_haproxy': 'op monitor interval="5s"',
-            'res_ceilometer_agent_central': 'op monitor interval="30s"',
-            'res_ceilometer_eth0_vip': ('params ip="10.0.5.100" '
-                                        'cidr_netmask="255.255.255.10" '
-                                        'nic="eth0"')
-        }
-        exp_clones = {'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'}
-        call1 = call(relation_id=None,
-                     groups={'grp_ceilometer_vips': 'res_ceilometer_eth0_vip'})
-        call2 = call(relation_id=None,
-                     init_services={'res_ceilometer_haproxy': 'haproxy'},
-                     corosync_bindiface='bnd0',
-                     corosync_mcastport=5802,
-                     resources=exp_resources,
-                     resource_params=exp_resource_params,
-                     delete_resources=['res_ceilometer_polling'],
-                     clones=exp_clones)
-        self.relation_set.assert_has_calls([call1, call2], any_order=False)
-
-    @patch.object(hooks, 'get_hacluster_config')
-    def test_ha_joined_dns_ha(self, mock_cluster_config):
-        def _fake_update(resources, resource_params, relation_id=None):
-            resources.update({'res_ceilometer_public_hostname':
-                              'ocf:maas:dns'})
-            resource_params.update({'res_ceilometer_public_hostname':
-                                    'params fqdn="ceilometer.maas" '
-                                    'ip_address="10.0.0.1"'})
-
-        self.test_config.set('dns-ha', True)
-        mock_cluster_config.return_value = {
-            'vip': None,
-            'ha-bindiface': 'em0',
-            'ha-mcastport': '8080',
-            'os-admin-hostname': None,
-            'os-internal-hostname': None,
-            'os-public-hostname': 'ceilometer.maas',
-        }
-        args = {
-            'relation_id': None,
-            'corosync_bindiface': 'em0',
-            'corosync_mcastport': '8080',
-            'init_services': {'res_ceilometer_haproxy': 'haproxy'},
-            'resources': {'res_ceilometer_public_hostname': 'ocf:maas:dns',
-                          'res_ceilometer_haproxy': 'lsb:haproxy',
-                          'res_ceilometer_agent_central':
-                          'lsb:ceilometer-agent-central'},
-            'resource_params': {
-                'res_ceilometer_public_hostname':
-                    'params fqdn="ceilometer.maas" '
-                    'ip_address="10.0.0.1"',
-                'res_ceilometer_haproxy': 'op monitor interval="5s"',
-                'res_ceilometer_agent_central': 'op monitor interval="30s"'},
-            'delete_resources': ['res_ceilometer_polling'],
-            'clones': {'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'}
-        }
-        self.update_dns_ha_resource_params.side_effect = _fake_update
-
-        hooks.ha_joined()
-        self.assertTrue(self.update_dns_ha_resource_params.called)
-        self.relation_set.assert_called_with(**args)
+        self.relation_set.assert_called_once_with(
+            relation_id=None, rel_data='data')
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'keystone_joined')

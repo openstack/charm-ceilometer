@@ -56,7 +56,7 @@ from charmhelpers.contrib.openstack.utils import (
     series_upgrade_complete,
 )
 from charmhelpers.contrib.openstack.ha.utils import (
-    update_dns_ha_resource_params,
+    generate_ha_relation_data,
 )
 from ceilometer_utils import (
     ApacheSSLContext,
@@ -89,13 +89,9 @@ from charmhelpers.contrib.openstack.ip import (
 )
 from charmhelpers.contrib.charmsupport import nrpe
 from charmhelpers.contrib.network.ip import (
-    get_iface_for_address,
-    get_netmask_for_address,
     get_relation_ip,
-    is_ipv6,
 )
 from charmhelpers.contrib.hahelpers.cluster import (
-    get_hacluster_config,
     is_clustered,
     is_elected_leader
 )
@@ -312,75 +308,17 @@ def cluster_changed():
 
 @hooks.hook('ha-relation-joined')
 def ha_joined(relation_id=None):
-    cluster_config = get_hacluster_config()
-    delete_resources = []
-    delete_resources.append('res_ceilometer_polling')
-
-    resources = {
-        'res_ceilometer_haproxy': 'lsb:haproxy',
-        'res_ceilometer_agent_central': 'lsb:ceilometer-agent-central',
+    ceil_ha_settings = {
+        'resources': {
+            'res_ceilometer_agent_central': 'lsb:ceilometer-agent-central'},
+        'resource_params': {
+            'res_ceilometer_agent_central': 'op monitor interval="30s"'},
+        'delete_resources': ['res_ceilometer_polling'],
     }
-
-    resource_params = {
-        'res_ceilometer_haproxy': 'op monitor interval="5s"',
-        'res_ceilometer_agent_central': 'op monitor interval="30s"'
-    }
-
-    if config('dns-ha'):
-        update_dns_ha_resource_params(relation_id=relation_id,
-                                      resources=resources,
-                                      resource_params=resource_params)
-    else:
-        vip_group = []
-        for vip in cluster_config['vip'].split():
-            if is_ipv6(vip):
-                res_ceilometer_vip = 'ocf:heartbeat:IPv6addr'
-                vip_params = 'ipv6addr'
-            else:
-                res_ceilometer_vip = 'ocf:heartbeat:IPaddr2'
-                vip_params = 'ip'
-
-            iface = get_iface_for_address(vip)
-            if iface is not None:
-                vip_key = 'res_ceilometer_{}_vip'.format(iface)
-                if vip_key in vip_group:
-                    if vip not in resource_params[vip_key]:
-                        vip_key = '{}_{}'.format(vip_key, vip_params)
-                    else:
-                        log("Resource '%s' (vip='%s') already exists in "
-                            "vip group - skipping" % (vip_key, vip), WARNING)
-                        continue
-
-                resources[vip_key] = res_ceilometer_vip
-                resource_params[vip_key] = (
-                    'params {ip}="{vip}" cidr_netmask="{netmask}"'
-                    ' nic="{iface}"'
-                    ''.format(ip=vip_params,
-                              vip=vip,
-                              iface=iface,
-                              netmask=get_netmask_for_address(vip))
-                )
-                vip_group.append(vip_key)
-
-        if len(vip_group) >= 1:
-            relation_set(relation_id=relation_id,
-                         groups={'grp_ceilometer_vips':
-                                 ' '.join(vip_group)})
-
-    init_services = {
-        'res_ceilometer_haproxy': 'haproxy'
-    }
-    clones = {
-        'cl_ceilometer_haproxy': 'res_ceilometer_haproxy'
-    }
-    relation_set(relation_id=relation_id,
-                 init_services=init_services,
-                 corosync_bindiface=cluster_config['ha-bindiface'],
-                 corosync_mcastport=cluster_config['ha-mcastport'],
-                 resources=resources,
-                 resource_params=resource_params,
-                 delete_resources=delete_resources,
-                 clones=clones)
+    settings = generate_ha_relation_data(
+        'ceilometer',
+        extra_settings=ceil_ha_settings)
+    relation_set(relation_id=relation_id, **settings)
 
 
 @hooks.hook('ha-relation-changed')
