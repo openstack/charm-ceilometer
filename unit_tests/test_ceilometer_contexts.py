@@ -131,6 +131,8 @@ class CeilometerContextsTest(CharmTestCase):
             'metering_secret': 'mysecret',
             'metering_time_to_live': -1,
             'event_time_to_live': -1,
+            'polling_interval': 300,
+            'enable_all_pollsters': False,
         })
 
     @patch.object(utils, 'get_shared_secret')
@@ -144,9 +146,39 @@ class CeilometerContextsTest(CharmTestCase):
             'metering_secret': 'mysecret',
             'metering_time_to_live': 7776000,
             'event_time_to_live': 7776000,
+            'polling_interval': 300,
+            'enable_all_pollsters': False,
         })
         self.assertTrue(type(context['metering_time_to_live']) is int)
         self.assertTrue(type(context['event_time_to_live']) is int)
+
+    @patch.object(utils, 'get_shared_secret')
+    def test_ceilometer_context_enable_all_pollsters(self, secret):
+        secret.return_value = 'mysecret'
+        self.test_config.set('enable-all-pollsters', True)
+        context = contexts.CeilometerContext()()
+        self.assertEqual(context, {
+            'port': 8777,
+            'metering_secret': 'mysecret',
+            'metering_time_to_live': -1,
+            'event_time_to_live': -1,
+            'polling_interval': 300,
+            'enable_all_pollsters': True,
+        })
+
+    @patch.object(utils, 'get_shared_secret')
+    def test_ceilometer_context_polling_interval(self, secret):
+        secret.return_value = 'mysecret'
+        self.test_config.set('polling-interval', 900)
+        context = contexts.CeilometerContext()()
+        self.assertEqual(context, {
+            'port': 8777,
+            'metering_secret': 'mysecret',
+            'metering_time_to_live': -1,
+            'event_time_to_live': -1,
+            'polling_interval': 900,
+            'enable_all_pollsters': False,
+        })
 
     def test_ceilometer_service_context(self):
         self.relation_ids.return_value = ['ceilometer-service:0']
