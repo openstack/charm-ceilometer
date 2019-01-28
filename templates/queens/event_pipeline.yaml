@@ -1,0 +1,38 @@
+---
+sources:
+  - name: event_source
+    events:
+     - "*"
+    sinks:
+     - event_sink
+{%- if remote_sinks %}
+     - remote_sink
+{% endif %}
+{%- if internal_sinks %}
+{%- for item in internal_sinks.keys() %}
+     - {{ item }}
+{% endfor -%}
+{% endif %}
+sinks:
+{%- if remote_sinks %}
+  - name: remote_sink
+    transformers:
+    publishers:
+     {% for item in remote_sinks -%}
+     - {{ item }}
+     {% endfor %}
+{%- endif -%}
+{%- if internal_sinks %}
+{%- for item, target in internal_sinks.items() -%}
+  - name: {{ item }}
+    transformers:
+    publishers:
+     - {{ target }}
+{%- endfor %}
+{% endif %}
+  - name: event_sink
+    transformers:
+    publishers:
+{%- if event_sink_publisher %}
+     - {{ event_sink_publisher }}
+{% endif %}

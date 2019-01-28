@@ -226,13 +226,23 @@ class CeilometerContextsTest(CharmTestCase):
         }
         self.assertEqual(contexts.HAProxyContext()(), expected)
 
-    def test_remote_sink_context_no_config(self):
+    @patch.object(contexts, 'get_os_codename_package')
+    def test_remote_sink_context_no_config(self, mock_get_rel):
+        mock_get_rel.return_value = 'mitaka'
         self.relation_ids.return_value = []
         self.os_release.return_value = 'mitaka'
-        self.assertEqual(contexts.RemoteSinksContext()(), {})
+        self.assertEqual(contexts.RemoteSinksContext()(), {
+            'event_sink_publisher': None})
 
-    def test_remote_sink_context_event_service_relation(self):
-        self.relation_ids.return_value = ['event-service:0']
+        mock_get_rel.return_value = 'queens'
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'event_sink_publisher':
+                          'notifier://?topic=alarm.all'})
+
+    @patch.object(contexts, 'get_os_codename_package')
+    def test_remote_sink_context_event_service_relation(self, mock_get_rel):
+        mock_get_rel.return_value = 'mitaka'
+        self.relation_ids.return_value = ['event-service:0', 'meter-service:0']
         self.related_units.return_value = ['panko/0']
         self.os_release.return_value = 'mitaka'
         data = {
@@ -240,21 +250,64 @@ class CeilometerContextsTest(CharmTestCase):
         }
         self.test_relation.set(data)
         self.assertEqual(contexts.RemoteSinksContext()(),
-                         {'internal_sinks': {'panko': 'panko://'}})
+                         {'internal_sinks': {'panko': 'panko://'},
+                          'event_sink_publisher': None})
 
-    def test_remote_sink_context_with_single_config(self):
-        self.relation_ids.return_value = []
+        mock_get_rel.return_value = 'queens'
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'internal_sinks': {'panko': 'panko://'},
+                          'event_sink_publisher':
+                          'notifier://?topic=alarm.all'})
+
+        self.test_config.set('events-publisher', 'gnocchi')
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'internal_sinks': {'panko': 'panko://'},
+                          'event_sink_publisher':
+                          'gnocchi://'})
+
+    @patch.object(contexts, 'get_os_codename_package')
+    def test_remote_sink_context_with_single_config(self, mock_get_rel):
+        mock_get_rel.return_value = 'mitaka'
+        self.relation_ids.return_value = ['meter-service:0']
         self.os_release.return_value = 'mitaka'
         self.test_config.set('remote-sink', 'http://foo')
         self.assertEqual(contexts.RemoteSinksContext()(),
-                         {'remote_sinks': ['http://foo']})
+                         {'remote_sinks': ['http://foo'],
+                          'event_sink_publisher': None})
 
-    def test_remote_sink_context_with_multiple_config(self):
-        self.relation_ids.return_value = []
+        mock_get_rel.return_value = 'queens'
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'remote_sinks': ['http://foo'],
+                          'event_sink_publisher':
+                          'notifier://?topic=alarm.all'})
+
+        self.test_config.set('events-publisher', 'gnocchi')
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'remote_sinks': ['http://foo'],
+                          'event_sink_publisher':
+                          'gnocchi://'})
+
+    @patch.object(contexts, 'get_os_codename_package')
+    def test_remote_sink_context_with_multiple_config(self, mock_get_rel):
+        mock_get_rel.return_value = 'mitaka'
+        self.relation_ids.return_value = ['meter-service:0']
         self.os_release.return_value = 'mitaka'
         self.test_config.set('remote-sink', 'http://foo http://bar')
         self.assertEqual(contexts.RemoteSinksContext()(),
-                         {'remote_sinks': ['http://foo', 'http://bar']})
+                         {'remote_sinks': ['http://foo', 'http://bar'],
+                          'event_sink_publisher': None})
+
+        mock_get_rel.return_value = 'queens'
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'remote_sinks': ['http://foo', 'http://bar'],
+                          'event_sink_publisher':
+                          'notifier://?topic=alarm.all'})
+
+        self.test_config.set('events-publisher', 'gnocchi')
+        self.assertEqual(contexts.RemoteSinksContext()(),
+                         {'remote_sinks': ['http://foo', 'http://bar'],
+                          'event_sink_publisher':
+                          'gnocchi://'})
 
     @patch.object(contexts, 'AMQPContext')
     def test_AMQPListenersContext(self, mock_AMQPContext):
