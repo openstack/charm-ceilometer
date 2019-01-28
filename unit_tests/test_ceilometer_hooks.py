@@ -182,66 +182,57 @@ class CeilometerHooksTest(CharmTestCase):
         self.assertEqual(cluster_joined.call_count, 3)
         any_changed.assert_called_once()
 
-    @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     def test_config_changed_no_upgrade(self,
-                                       joined, mock_config, event_pipe):
+                                       joined, mock_config):
         self.openstack_upgrade_available.return_value = False
         hooks.hooks.execute(['hooks/config-changed'])
         self.openstack_upgrade_available.\
             assert_called_with('ceilometer-common')
         self.assertFalse(self.do_openstack_upgrade.called)
-        self.assertTrue(event_pipe.called)
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
         self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
 
-    @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     def test_config_changed_queens(self,
-                                   joined, mock_config, event_pipe):
+                                   joined, mock_config):
         self.openstack_upgrade_available.return_value = False
         self.get_os_codename_install_source.return_value = 'queens'
         hooks.hooks.execute(['hooks/config-changed'])
         self.openstack_upgrade_available.\
             assert_called_with('ceilometer-common')
         self.assertFalse(self.do_openstack_upgrade.called)
-        self.assertTrue(event_pipe.called)
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
         self.close_port.assert_called_with(hooks.CEILOMETER_PORT)
         self.open_port.assert_not_called()
 
-    @patch.object(hooks, 'install_event_pipeline_setting')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     def test_config_changed_upgrade(self,
-                                    joined, mock_config, event_pipe):
+                                    joined, mock_config):
         self.openstack_upgrade_available.return_value = True
         hooks.hooks.execute(['hooks/config-changed'])
         self.openstack_upgrade_available.\
             assert_called_with('ceilometer-common')
         self.assertTrue(self.do_openstack_upgrade.called)
-        self.assertTrue(event_pipe.called)
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(joined.called)
         self.assertTrue(self.reload_systemd.called)
         self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
 
-    @patch.object(hooks, 'install_event_pipeline_setting')
-    def test_config_changed_with_openstack_upgrade_action(self,
-                                                          event_pipe):
+    def test_config_changed_with_openstack_upgrade_action(self):
         self.openstack_upgrade_available.return_value = True
         self.test_config.set('action-managed-upgrade', True)
 
         hooks.hooks.execute(['hooks/config-changed'])
 
         self.assertFalse(self.do_openstack_upgrade.called)
-        self.assertTrue(event_pipe.called)
         self.open_port.assert_called_with(hooks.CEILOMETER_PORT)
 
     def test_keystone_credentials_joined(self):

@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import base64
-import shutil
 import subprocess
 import sys
 import os
@@ -215,7 +214,6 @@ def config_changed():
         if openstack_upgrade_available('ceilometer-common'):
             status_set('maintenance', 'Upgrading to new OpenStack release')
             do_openstack_upgrade(CONFIGS)
-    install_event_pipeline_setting()
     update_nrpe_config()
     CONFIGS.write_all()
     # NOTE(jamespage): Drop when charm switches to apache2+mod_wsgi
@@ -245,14 +243,6 @@ def config_changed():
     # to ceilometer-polling in liberty (see LP: #1606787).
     for rid in relation_ids('ha'):
         ha_joined(rid)
-
-
-def install_event_pipeline_setting():
-    src_file = 'files/event_pipeline_alarm.yaml'
-    dest_file = '/etc/ceilometer/event_pipeline_alarm.yaml'
-    if not os.path.isdir(os.path.dirname(dest_file)):
-        os.makedirs(os.path.dirname(dest_file))
-    shutil.copy(src_file, dest_file)
 
 
 @hooks.hook('upgrade-charm')
