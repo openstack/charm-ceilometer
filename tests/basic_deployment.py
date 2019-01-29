@@ -45,8 +45,12 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         self._deploy()
 
         u.log.info('Waiting on extended status checks...')
-        exclude_services = ['mongodb', 'memcached']
-        self._auto_wait_for_status(exclude_services=exclude_services)
+        self.exclude_services = ['mongodb', 'memcached']
+        if self._get_openstack_release() >= self.xenial_pike:
+            # Ceilometer will come up blocked until the ceilometer-upgrade
+            # action is run
+            self.exclude_services.append("ceilometer")
+        self._auto_wait_for_status(exclude_services=self.exclude_services)
 
         self.d.sentry.wait()
         self._initialize_tests()
@@ -163,6 +167,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         self.nova_sentry = self.d.sentry['nova-compute'][0]
         if self._get_openstack_release() >= self.xenial_pike:
             self.gnocchi_sentry = self.d.sentry['gnocchi'][0]
+            self.run_ceilometer_upgrade_action()
         else:
             self.mongodb_sentry = self.d.sentry['mongodb'][0]
         u.log.debug('openstack release val: {}'.format(
@@ -681,8 +686,13 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         assert u.status_get(unit)[0] == "active"
         u.log.debug('OK')
 
-    def test_920_ceilometer_upgrade(self):
-        """Run ceilometer-upgrade"""
+    def run_ceilometer_upgrade_action(self):
+        """Run ceilometer-upgrade
+
+        This action will be run early to initialize ceilometer
+        when gnocchi is related.
+        Ceilometer will be in a blocked state until this runs.
+        """
         if self._get_openstack_release() < self.xenial_pike:
             u.log.debug('Not checking ceilometer-upgrade')
             return
@@ -691,4 +701,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
 
         action_id = unit.run_action("ceilometer-upgrade")
         assert u.wait_on_action(action_id), "ceilometer-upgrade action failed"
+        # Wait for acivte Unit is ready on ceilometer
+        self.exclude_services.remove('ceilometer')
+        self._auto_wait_for_status(exclude_services=self.exclude_services)
         u.log.debug('OK')

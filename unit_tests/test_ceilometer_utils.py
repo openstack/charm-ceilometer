@@ -270,6 +270,7 @@ class CeilometerUtilsTest(CharmTestCase):
                 utils.VERSION_PACKAGE
             )
 
+    @patch.object(utils, 'check_ceilometer_upgraded')
     @patch.object(utils, 'resolve_required_interfaces')
     @patch.object(utils, 'services')
     @patch.object(utils, 'determine_ports')
@@ -278,13 +279,16 @@ class CeilometerUtilsTest(CharmTestCase):
                                 make_assess_status_func,
                                 determine_ports,
                                 services,
-                                resolve_required_interfaces):
+                                resolve_required_interfaces,
+                                check_ceilometer_upgraded):
+        check_ceilometer_upgraded.return_value = None, None
         services.return_value = 's1'
         determine_ports.return_value = 'p1'
         resolve_required_interfaces.return_value = {'a': ['b']}
         utils.assess_status_func('test-config')
         make_assess_status_func.assert_called_once_with(
-            'test-config', {'a': ['b']}, services='s1', ports='p1')
+            'test-config', {'a': ['b']}, charm_func=check_ceilometer_upgraded,
+            services='s1', ports='p1')
 
     def test_pause_unit_helper(self):
         with patch.object(utils, '_pause_resume_helper') as prh:
@@ -433,3 +437,29 @@ class CeilometerUtilsTest(CharmTestCase):
         with self.assertRaises(utils.FailedAction):
             utils.ceilometer_upgrade_helper(self.CONFIGS)
         mock_ceilometer_upgrade.assert_called_once_with(action=True)
+
+    @patch.object(utils, 'kv')
+    def test_check_ceilometer_upgraded(self, mock_kv):
+        self.CONFIGS = MagicMock()
+        _kv = MagicMock()
+        mock_kv.return_value = _kv
+
+        # Not related
+        self.relation_ids.return_value = []
+        self.assertEqual(
+            (None, None),
+            utils.check_ceilometer_upgraded(self.CONFIGS))
+
+        # Related not ready
+        self.relation_ids.return_value = ['metric:1']
+        _kv.get.return_value = False
+        self.assertEqual(
+            ("blocked", "Run the ceilometer-upgrade action to initialize "
+                        "ceilometer and gnocchi"),
+            utils.check_ceilometer_upgraded(self.CONFIGS))
+
+        # Related ready
+        _kv.get.return_value = True
+        self.assertEqual(
+            (None, None),
+            utils.check_ceilometer_upgraded(self.CONFIGS))
