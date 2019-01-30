@@ -19,6 +19,8 @@ import traceback
 
 from collections import OrderedDict
 
+from charmhelpers.core.unitdata import kv
+
 from charmhelpers.contrib.openstack import (
     templating,
     context,
@@ -75,6 +77,7 @@ POLLING_CONF = "%s/polling.yaml" % CEILOMETER_CONF_DIR
 CEILOMETER_API_SYSTEMD_CONF = (
     '/etc/systemd/system/ceilometer-api.service.d/override.conf'
 )
+CEILOMETER_UPGRADED = "ceilometer-upgrade-run"
 HTTPS_APACHE_CONF = "/etc/apache2/sites-available/openstack_https_frontend"
 HTTPS_APACHE_24_CONF = "/etc/apache2/sites-available/" \
     "openstack_https_frontend.conf"
@@ -545,6 +548,7 @@ def assess_status_func(configs):
     """
     return make_assess_status_func(
         configs, resolve_required_interfaces(),
+        charm_func=check_ceilometer_upgraded,
         services=services(), ports=determine_ports())
 
 
@@ -655,6 +659,10 @@ def ceilometer_upgrade_helper(CONFIGS):
                            'unexpected error: {}'.format(e.message),
                            outcome='ceilometer-upgrade failed, see traceback.',
                            trace=traceback.format_exc())
+    kvstore = kv()
+    if not kvstore.get(CEILOMETER_UPGRADED, False):
+        kvstore.set(key=CEILOMETER_UPGRADED, value=True)
+        kvstore.flush()
 
 
 def ceilometer_upgrade(action=False):
@@ -669,3 +677,25 @@ def ceilometer_upgrade(action=False):
         log("Running ceilomter-upgrade: {}".format(" ".join(cmd)), DEBUG)
         subprocess.check_call(cmd)
         log("ceilometer-upgrade succeeded", DEBUG)
+
+
+def check_ceilometer_upgraded(configs):
+    """Assess status check if ceilometer-upgrade action has run
+
+    When related to gnocchi check that the ceilometer-upgrade action has been
+    run. Set blocked when action run is still required. Set None None when no
+    action is required.
+
+    :param configs: The charms main OSConfigRenderer object.
+    :return: str, str tuple or None, None
+    """
+
+    if relation_ids("metric-service"):
+        kvstore = kv()
+        if not kvstore.get(CEILOMETER_UPGRADED, False):
+            log("Action ceilometer-upgrade not yet run, setting status "
+                "blocked")
+            return "blocked", ("Run the ceilometer-upgrade action to "
+                               "initialize ceilometer and gnocchi")
+    # Avoid changing status check
+    return None, None

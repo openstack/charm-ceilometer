@@ -22,6 +22,7 @@ from charmhelpers.core.hookenv import (
     action_set,
 )
 from ceilometer_utils import (
+    assess_status,
     ceilometer_upgrade_helper,
     pause_unit_helper,
     register_configs,
@@ -59,6 +60,7 @@ def ceilometer_upgrade(args):
         if e.trace:
             action_set({'traceback': e.trace})
         raise Exception(str(e.message))
+    assess_status(register_configs())
 
 
 # A dictionary of all the defined actions to callables (which take
