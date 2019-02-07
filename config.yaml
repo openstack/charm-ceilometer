@@ -239,6 +239,16 @@ options:
       OpenStack mostly defaults to using public endpoints for
       internal communication between services. If set to True this option
       will configure services to use internal endpoints where possible.
+  events-publisher:
+    type: string
+    default: aodh
+    description: |
+      As of the Queens release ceilometer no longer consumes events on the
+      event.sample queue. Valid options here include "aodh" or "gnocchi" and
+      if you want to disable publishing events you can specify an empty string
+      "". The default is set to aodh for backwards compatibility. Note this
+      setting has no impact on the remote-sink option and is ignored prior to
+      Queens.
   remote-sink:
     type: string
     default:

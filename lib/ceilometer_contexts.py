@@ -17,9 +17,13 @@ from charmhelpers.core.hookenv import (
     relation_get,
     related_units,
     config,
+    log,
+    INFO,
+    WARNING,
 )
 
 from charmhelpers.contrib.openstack.utils import (
+    get_os_codename_package,
     os_release,
     CompareOpenStackReleases,
 )
@@ -168,6 +172,27 @@ class RemoteSinksContext(OSContextGenerator):
                     if not ctxt.get('internal_sinks'):
                         ctxt['internal_sinks'] = {}
                     ctxt['internal_sinks'][unit.split('/')[0]] = publisher
+
+        release = get_os_codename_package('ceilometer-common', fatal=False)
+        ctxt['event_sink_publisher'] = None
+        if CompareOpenStackReleases(release) >= 'queens':
+            # NOTE: see bug LP 1676586
+            if config('events-publisher') == "aodh":
+                ctxt['event_sink_publisher'] = 'notifier://?topic=alarm.all'
+            elif config('events-publisher') == "gnocchi":
+                if relation_ids('metric-service'):
+                    ctxt['event_sink_publisher'] = 'gnocchi://'
+                else:
+                    log("Unable to configure event publisher '{}' since "
+                        "no gnocchi relation found".
+                        format(config('events-publisher')), level=INFO)
+            elif config('events-publisher') == "":
+                log("Not configuring any event publishers", level=INFO)
+            else:
+                log("Invalid event publisher config provided '{}'. Not "
+                    "configuring any event publishers".
+                    format(config('events-publisher')), level=WARNING)
+
         return ctxt
 
 
