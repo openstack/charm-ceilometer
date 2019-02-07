@@ -73,6 +73,9 @@ TO_PATCH = [
     'get_os_codename_install_source',
     'services',
     'remove_old_packages',
+    'is_leader',
+    'leader_get',
+    'leader_set',
 ]
 
 
@@ -181,6 +184,17 @@ class CeilometerHooksTest(CharmTestCase):
         hooks.hooks.execute(['hooks/upgrade-charm'])
         self.assertEqual(cluster_joined.call_count, 3)
         any_changed.assert_called_once()
+
+    @patch.object(hooks, 'any_changed')
+    @patch('charmhelpers.core.hookenv.config')
+    @patch.object(hooks, 'cluster_joined')
+    def test_upgrade_charm_set_ceilometer_upgraded(
+            self, cluster_joined, mock_config, any_changed):
+        self.is_leader.return_value = True
+        self.leader_get.return_value = False
+        self.relation_ids.return_value = ['metric-service:1']
+        hooks.hooks.execute(['hooks/upgrade-charm'])
+        self.leader_set.assert_called_once_with(ceilometer_upgrade_run=True)
 
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')

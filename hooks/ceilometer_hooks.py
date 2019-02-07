@@ -36,6 +36,9 @@ from charmhelpers.core.hookenv import (
     status_set,
     WARNING,
     DEBUG,
+    is_leader,
+    leader_get,
+    leader_set,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -258,6 +261,18 @@ def upgrade_charm():
     any_changed()
     for rid in relation_ids('cluster'):
         cluster_joined(relation_id=rid)
+    # NOTE: (thedac) Currently there is no method to independently check if
+    # ceilometer-upgrade has been run short of manual DB queries.
+    # On upgrade-charm the leader node must assume it has already been run
+    # and assert so with leader-set. If this is not done, then the upgrade from
+    # the previous version of the charm will leave ceilometer in a blocked
+    # state.
+    if is_leader() and relation_ids("metric-service"):
+        if not leader_get("ceilometer_upgrade_run"):
+            log("Assuming ceilometer-upgrade has been run. If this is not the "
+                "case, please run the ceilometer-upgrade action on the leader "
+                "node.", level=WARNING)
+            leader_set(ceilometer_upgrade_run=True)
 
 
 @hooks.hook('cluster-relation-joined')

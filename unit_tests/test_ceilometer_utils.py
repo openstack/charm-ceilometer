@@ -38,6 +38,8 @@ TO_PATCH = [
     'token_cache_pkgs',
     'os_release',
     'is_leader',
+    'leader_set',
+    'leader_get',
     'reset_os_release',
     'relation_ids',
 ]
@@ -438,11 +440,9 @@ class CeilometerUtilsTest(CharmTestCase):
             utils.ceilometer_upgrade_helper(self.CONFIGS)
         mock_ceilometer_upgrade.assert_called_once_with(action=True)
 
-    @patch.object(utils, 'kv')
-    def test_check_ceilometer_upgraded(self, mock_kv):
+    def test_check_ceilometer_upgraded(self):
         self.CONFIGS = MagicMock()
-        _kv = MagicMock()
-        mock_kv.return_value = _kv
+        self.is_leader.return_value = True
 
         # Not related
         self.relation_ids.return_value = []
@@ -452,14 +452,14 @@ class CeilometerUtilsTest(CharmTestCase):
 
         # Related not ready
         self.relation_ids.return_value = ['metric:1']
-        _kv.get.return_value = False
+        self.leader_get.return_value = False
         self.assertEqual(
-            ("blocked", "Run the ceilometer-upgrade action to initialize "
-                        "ceilometer and gnocchi"),
+            ("blocked", "Run the ceilometer-upgrade action on the leader "
+                        "to initialize ceilometer and gnocchi"),
             utils.check_ceilometer_upgraded(self.CONFIGS))
 
         # Related ready
-        _kv.get.return_value = True
+        self.leader_get.return_value = True
         self.assertEqual(
             (None, None),
             utils.check_ceilometer_upgraded(self.CONFIGS))
