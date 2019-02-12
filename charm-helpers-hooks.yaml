@@ -1,5 +1,5 @@
 repo: https://github.com/juju/charm-helpers
-destination: hooks/charmhelpers
+destination: charmhelpers
 include:
     - core
     - osplatform
@@ -9,7 +9,7 @@ include:
     - contrib.hahelpers
     - contrib.storage.linux
     - contrib.network.ip
-    - contrib.python.packages
+    - contrib.python
     - contrib.charmsupport
     - contrib.peerstorage
     - payload.execd
