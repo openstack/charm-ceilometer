@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 from mock import patch, MagicMock
 
 import ceilometer_contexts as contexts
@@ -100,14 +101,13 @@ class CeilometerContextsTest(CharmTestCase):
 
     def test_mongodb_context_related_replset_multiple_mongo(self):
         self.relation_ids.return_value = ['shared-db:0']
-        related_units = {
-            'mongodb/0': {'hostname': 'mongodb-0',
-                          'port': 8090,
-                          'replset': 'replset-1'},
-            'mongodb/1': {'hostname': 'mongodb-1',
-                          'port': 8090,
-                          'replset': 'replset-1'}
-        }
+        related_units = collections.OrderedDict(
+            [('mongodb/0', {'hostname': 'mongodb-0',
+                            'port': 8090,
+                            'replset': 'replset-1'}),
+             ('mongodb/1', {'hostname': 'mongodb-1',
+                            'port': 8090,
+                            'replset': 'replset-1'})])
         self.related_units.return_value = [k for k in related_units.keys()]
 
         def relation_get(attr, unit, relid):
@@ -206,7 +206,7 @@ class CeilometerContextsTest(CharmTestCase):
     def test_get_shared_secret_new(self, exists, uuid4):
         exists.return_value = False
         uuid4.return_value = 'newsecret'
-        with patch('__builtin__.open'):
+        with patch('builtins.open'):
             self.assertEqual(utils.get_shared_secret(),
                              'newsecret')
 

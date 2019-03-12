@@ -475,7 +475,7 @@ def get_shared_secret():
         secret = str(uuid.uuid4())
         set_shared_secret(secret)
     else:
-        with open(SHARED_SECRET, 'r') as secret_file:
+        with open(SHARED_SECRET, 'rt') as secret_file:
             secret = secret_file.read().strip()
     return secret
 
@@ -486,7 +486,7 @@ def set_shared_secret(secret):
 
     :param secret: the secret to set
     """
-    with open(SHARED_SECRET, 'w') as secret_file:
+    with open(SHARED_SECRET, 'wt') as secret_file:
         secret_file.write(secret)
 
 

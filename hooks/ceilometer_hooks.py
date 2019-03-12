@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright 2016 Canonical Ltd
 #
@@ -18,6 +18,18 @@ import base64
 import subprocess
 import sys
 import os
+
+_path = os.path.dirname(os.path.realpath(__file__))
+_root = os.path.abspath(os.path.join(_path, '..'))
+
+
+def _add_path(path):
+    if path not in sys.path:
+        sys.path.insert(1, path)
+
+
+_add_path(_root)
+
 
 from charmhelpers.fetch import (
     apt_install,
@@ -415,7 +427,7 @@ def ceilometer_joined():
     # This value gets tranformed to a path by the context we need to
     # pass the data to agents.
     if 'rabbit_ssl_ca' in context:
-        with open(context['rabbit_ssl_ca']) as fh:
+        with open(context['rabbit_ssl_ca'], 'rt') as fh:
             context['rabbit_ssl_ca'] = base64.b64encode(fh.read())
     for relid in relation_ids('ceilometer-service'):
         relation_set(relid, context)

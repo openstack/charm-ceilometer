@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright 2016 Canonical Ltd
 #
@@ -16,6 +16,21 @@
 
 import os
 import sys
+
+_path = os.path.dirname(os.path.realpath(__file__))
+_hooks = os.path.abspath(os.path.join(_path, '../hooks'))
+_root = os.path.abspath(os.path.join(_path, '..'))
+_lib = os.path.abspath(os.path.join(_path, '../lib'))
+
+
+def _add_path(path):
+    if path not in sys.path:
+        sys.path.insert(1, path)
+
+_add_path(_hooks)
+_add_path(_root)
+_add_path(_lib)
+
 
 from charmhelpers.core.hookenv import (
     action_fail,
@@ -59,7 +74,7 @@ def ceilometer_upgrade(args):
             action_set({'outcome': e.outcome})
         if e.trace:
             action_set({'traceback': e.trace})
-        raise Exception(str(e.message))
+        raise Exception(str(e))
     assess_status(register_configs())
 
 

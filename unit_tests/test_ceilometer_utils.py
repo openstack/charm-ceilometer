@@ -422,12 +422,10 @@ class CeilometerUtilsTest(CharmTestCase):
             utils.ceilometer_upgrade_helper(self.CONFIGS)
         mock_ceilometer_upgrade.assert_not_called()
 
-    @patch.object(utils, 'subprocess')
     @patch.object(utils, 'ceilometer_upgrade')
     @patch('charmhelpers.core.hookenv.config')
     def test_ceilometer_upgrade_helper_raise(self, mock_config,
-                                             mock_ceilometer_upgrade,
-                                             mock_subprocess):
+                                             mock_ceilometer_upgrade):
         self.get_os_codename_install_source.return_value = 'ocata'
         self.CONFIGS = MagicMock()
         self.CONFIGS.complete_contexts.return_value = [
@@ -435,8 +433,15 @@ class CeilometerUtilsTest(CharmTestCase):
             'identity-service',
             'mongodb'
         ]
+        # workaround Py3 constraint that raise only accepts an actual
+        # exception, so we have to patch CalledProcessError back onto the
+        # mocked out subprocess module
+        import subprocess
+        exc = subprocess.CalledProcessError
         mock_ceilometer_upgrade.side_effect = utils.FailedAction("message")
-        with self.assertRaises(utils.FailedAction):
+        with patch.object(utils, 'subprocess') as subp, \
+                self.assertRaises(utils.FailedAction):
+            subp.CalledProcessError = exc
             utils.ceilometer_upgrade_helper(self.CONFIGS)
         mock_ceilometer_upgrade.assert_called_once_with(action=True)
 
