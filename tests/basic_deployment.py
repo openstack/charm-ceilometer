@@ -99,6 +99,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'keystone:shared-db': 'percona-cluster:shared-db',
             'ceilometer:ceilometer-service': 'ceilometer-agent:'
                                              'ceilometer-service',
+            'ceilometer-agent:amqp': 'rabbitmq-server:amqp',
             'nova-compute:nova-ceilometer': 'ceilometer-agent:nova-ceilometer',
             'nova-compute:amqp': 'rabbitmq-server:amqp',
             'glance:identity-service': 'keystone:identity-service',

@@ -140,15 +140,20 @@ class CeilometerHooksTest(CharmTestCase):
         self.relation_set.assert_called_with(
             ceilometer_database='ceilometer')
 
+    @patch.object(hooks, 'certs_changed')
+    @patch.object(hooks, 'related_units')
     @patch.object(hooks, 'keystone_joined')
     @patch('charmhelpers.core.hookenv.config')
     @patch.object(hooks, 'ceilometer_joined')
     def test_any_changed(self, ceilometer_joined, mock_config,
-                         keystone_joined):
-        self.relation_ids.return_value = ['identity-service:1']
+                         keystone_joined, _related_units, _certs_changed):
+        self.relation_ids.side_effect = [
+            ['certificates:42'], ['identity-service:1']]
+        _related_units.return_value = ['vault/0']
         hooks.hooks.execute(['hooks/shared-db-relation-changed'])
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(ceilometer_joined.called)
+        _certs_changed.assert_called_once_with('certificates:42', 'vault/0')
         keystone_joined.assert_called_with(relid='identity-service:1')
         self.configure_https.assert_called_once()
 
@@ -426,3 +431,20 @@ class CeilometerHooksTest(CharmTestCase):
         )
         self.apt_install.assert_called_with(['python3-gnocchiclient'],
                                             fatal=True)
+
+    @patch.object(hooks.cert_utils, 'get_certificate_request')
+    @patch.object(hooks, 'relation_set')
+    def test_certs_joined(self, _relation_set, _get_certificate_request):
+        hooks.hooks.execute(['hooks/certificates-relation-joined'])
+        _get_certificate_request.assert_called_once_with()
+        _relation_set.assert_called_once_with(
+            relation_id=None,
+            relation_settings=_get_certificate_request())
+
+    @patch.object(hooks, 'configure_https')
+    @patch.object(hooks.cert_utils, 'process_certificates')
+    def test_certs_changed(self, _process_certificates, _configure_https):
+        hooks.hooks.execute(['hooks/certificates-relation-changed'])
+        _process_certificates.assert_called_once_with(
+            'ceilometer-api', None, None)
+        _configure_https.assert_called_once_with()

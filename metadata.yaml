@@ -47,6 +47,8 @@ requires:
     interface: gnocchi
   event-service:
     interface: event-service
+  certificates:
+    interface: tls-certificates
 peers:
   cluster:
     interface: ceilometer-ha

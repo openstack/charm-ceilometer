@@ -25,20 +25,22 @@ from charmhelpers.fetch import (
     filter_installed_packages,
 )
 from charmhelpers.core.hookenv import (
-    open_port,
-    close_port,
-    relation_get,
-    relation_set,
-    relation_ids,
-    config,
-    Hooks, UnregisteredHookError,
-    log,
-    status_set,
-    WARNING,
     DEBUG,
+    Hooks,
+    UnregisteredHookError,
+    WARNING,
+    close_port,
+    config,
     is_leader,
     leader_get,
     leader_set,
+    log,
+    open_port,
+    related_units,
+    relation_get,
+    relation_ids,
+    relation_set,
+    status_set,
 )
 from charmhelpers.core.host import (
     service_restart,
@@ -46,6 +48,7 @@ from charmhelpers.core.host import (
     mkdir,
     init_is_systemd,
 )
+import charmhelpers.contrib.openstack.cert_utils as cert_utils
 from charmhelpers.contrib.openstack.context import ADDRESS_TYPES
 from charmhelpers.contrib.openstack.utils import (
     configure_installation_source,
@@ -170,6 +173,9 @@ def metric_service_joined():
 @restart_on_change(restart_map())
 def any_changed():
     CONFIGS.write_all()
+    for r_id in relation_ids('certificates'):
+        for unit in related_units(r_id):
+            certs_changed(r_id, unit)
     configure_https()
     for rid in relation_ids('identity-service'):
         keystone_joined(relid=rid)
@@ -230,6 +236,10 @@ def config_changed():
         open_port(CEILOMETER_PORT)
     else:
         close_port(CEILOMETER_PORT)
+
+    # Refire certificates relations for VIP changes
+    for r_id in relation_ids('certificates'):
+        certs_joined(r_id)
 
     configure_https()
 
@@ -443,6 +453,22 @@ def post_series_upgrade():
     log("Running complete series upgrade hook", "INFO")
     series_upgrade_complete(
         resume_unit_helper, CONFIGS)
+
+
+@hooks.hook('certificates-relation-joined')
+def certs_joined(relation_id=None):
+    relation_set(
+        relation_id=relation_id,
+        relation_settings=cert_utils.get_certificate_request())
+
+
+@hooks.hook('certificates-relation-changed')
+def certs_changed(relation_id=None, unit=None):
+    @restart_on_change(restart_map())
+    def _certs_changed():
+        cert_utils.process_certificates('ceilometer-api', relation_id, unit)
+        configure_https()
+    _certs_changed()
 
 
 if __name__ == '__main__':
