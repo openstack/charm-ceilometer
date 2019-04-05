@@ -16,6 +16,7 @@ series:
   - xenial
   - bionic
   - cosmic
+  - disco
   - trusty
 extra-bindings:
   public:
