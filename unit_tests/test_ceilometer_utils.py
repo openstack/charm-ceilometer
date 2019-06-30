@@ -368,9 +368,18 @@ class CeilometerUtilsTest(CharmTestCase):
     @patch.object(utils, 'subprocess')
     def test_ceilometer_upgrade(self, mock_subprocess):
         self.is_leader.return_value = True
+        self.os_release.return_value = 'queens'
+        utils.ceilometer_upgrade()
+        mock_subprocess.check_call.assert_called_with(
+            ['ceilometer-upgrade', '--debug', '--retry', '10'])
+
+    @patch.object(utils, 'subprocess')
+    def test_ceilometer_upgrade_ocata(self, mock_subprocess):
+        self.is_leader.return_value = True
         self.os_release.return_value = 'ocata'
         utils.ceilometer_upgrade()
-        mock_subprocess.check_call.assert_called_with(['ceilometer-upgrade'])
+        mock_subprocess.check_call.assert_called_with(
+            ['ceilometer-upgrade', '--debug'])
 
     @patch.object(utils, 'subprocess')
     def test_ceilometer_upgrade_mitaka(self, mock_subprocess):

@@ -625,9 +625,9 @@ class FailedAction(Exception):
 
 
 def ceilometer_upgrade_helper(CONFIGS):
-    """Helper function to run ceilomter-upgrde, and then call assess_status(...) in
-    effect, so that the status is correctly updated.
-    Uses ceilomter_upgrde to do the work.
+    """Helper function to run ceilometer-upgrade, and then call
+    assess_status(...) in effect, so that the status is correctly updated.
+    Uses ceilometer_upgrade to do the work.
 
     @param configs: a templating.OSConfigRenderer() object
     @returns None - this function is executed for its side-effect
@@ -665,11 +665,14 @@ def ceilometer_upgrade(action=False):
     API is not ready for requests"""
     if is_leader() or action:
         if (CompareOpenStackReleases(os_release('ceilometer-common')) >=
+                'queens'):
+            cmd = ['ceilometer-upgrade', '--debug', '--retry', '10']
+        elif (CompareOpenStackReleases(os_release('ceilometer-common')) >=
                 'newton'):
-            cmd = ['ceilometer-upgrade']
+            cmd = ['ceilometer-upgrade', '--debug']
         else:
             cmd = ['ceilometer-dbsync']
-        log("Running ceilomter-upgrade: {}".format(" ".join(cmd)), DEBUG)
+        log("Running ceilometer-upgrade: {}".format(" ".join(cmd)), DEBUG)
         subprocess.check_call(cmd)
         log("ceilometer-upgrade succeeded", DEBUG)
         leader_set(ceilometer_upgrade_run=True)
