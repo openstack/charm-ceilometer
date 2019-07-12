@@ -66,7 +66,7 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
         #       https://bugs.launchpad.net/charm-ceilometer/+bug/1671865
         this_service = {'name': 'ceilometer'}
         other_services = [
-            {'name': 'percona-cluster', 'constraints': {'mem': '3072M'}},
+            self.get_percona_service_entry(),
             {'name': 'rabbitmq-server'},
             {'name': 'keystone'},
             {'name': 'glance'},  # to satisfy workload status
