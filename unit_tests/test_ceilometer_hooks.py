@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import os
 import sys
 
@@ -77,6 +78,15 @@ TO_PATCH = [
     'leader_get',
     'leader_set',
 ]
+
+
+CEIL_HA_SETTINGS = {
+    'resources': {
+        'res_ceilometer_agent_central': 'lsb:ceilometer-agent-central'},
+    'resource_params': {
+        'res_ceilometer_agent_central': 'op monitor interval="30s"'},
+    'delete_resources': ['res_ceilometer_polling'],
+}
 
 
 class CeilometerHooksTest(CharmTestCase):
@@ -394,6 +404,27 @@ class CeilometerHooksTest(CharmTestCase):
     def test_ha_relation_joined(self):
         self.generate_ha_relation_data.return_value = {'rel_data': 'data'}
         hooks.hooks.execute(['hooks/ha-relation-joined'])
+        self.generate_ha_relation_data.assert_has_calls([
+            call(
+                'ceilometer',
+                haproxy_enabled=True,
+                extra_settings=CEIL_HA_SETTINGS)
+        ])
+        self.relation_set.assert_called_once_with(
+            relation_id=None, rel_data='data')
+
+    def test_ha_relation_joiend_queens(self):
+        self.get_os_codename_install_source.return_value = 'queens'
+        self.generate_ha_relation_data.return_value = {'rel_data': 'data'}
+        hooks.hooks.execute(['hooks/ha-relation-joined'])
+        ceil_ha_settings = copy.deepcopy(CEIL_HA_SETTINGS)
+        ceil_ha_settings['delete_resources'].append('res_ceilometer_haproxy')
+        self.generate_ha_relation_data.assert_has_calls([
+            call(
+                'ceilometer',
+                haproxy_enabled=False,
+                extra_settings=ceil_ha_settings)
+        ])
         self.relation_set.assert_called_once_with(
             relation_id=None, rel_data='data')
 
