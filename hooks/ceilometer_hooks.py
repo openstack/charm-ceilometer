@@ -342,8 +342,16 @@ def ha_joined(relation_id=None):
             'res_ceilometer_agent_central': 'op monitor interval="30s"'},
         'delete_resources': ['res_ceilometer_polling'],
     }
+
+    haproxy_enabled = True
+    cmp_codename = CompareOpenStackReleases(
+        get_os_codename_install_source(config('openstack-origin')))
+    if cmp_codename >= 'ocata':
+        haproxy_enabled = False
+
     settings = generate_ha_relation_data(
         'ceilometer',
+        haproxy_enabled,
         extra_settings=ceil_ha_settings)
     relation_set(relation_id=relation_id, **settings)
 
