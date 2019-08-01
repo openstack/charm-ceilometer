@@ -472,6 +472,11 @@ def pre_series_upgrade():
 @hooks.hook('post-series-upgrade')
 def post_series_upgrade():
     log("Running complete series upgrade hook", "INFO")
+    if init_is_systemd():
+        # NOTE(ajkavangh): ensure systemd override folder exists prior to
+        #                  attempting to write override.conf
+        #                  See bug: #1838634
+        mkdir(os.path.dirname(CEILOMETER_API_SYSTEMD_CONF))
     series_upgrade_complete(
         resume_unit_helper, CONFIGS)
 
