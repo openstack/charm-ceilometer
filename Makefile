@@ -1,5 +1,5 @@
 #!/usr/bin/make
-PYTHON := /usr/bin/env python
+PYTHON := /usr/bin/env python3
 
 clean:
 	rm -rf .coverage .tox .testrepository trusty .unit-state.db
@@ -10,11 +10,11 @@ lint:
 
 test:
 	@# Bundletester expects unit tests here.
-	@tox -e py27
+	@tox -e py37
 
 functional_test:
-	@echo Starting functional tests...
-	@tox -e func27
+	@echo Starting Zaza functional tests...
+	@tox -e func
 
 bin/charm_helpers_sync.py:
 	@mkdir -p bin
