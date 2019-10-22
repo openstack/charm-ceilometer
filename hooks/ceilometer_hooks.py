@@ -492,7 +492,7 @@ def certs_joined(relation_id=None):
 def certs_changed(relation_id=None, unit=None):
     @restart_on_change(restart_map())
     def _certs_changed():
-        cert_utils.process_certificates('ceilometer-api', relation_id, unit)
+        cert_utils.process_certificates('ceilometer', relation_id, unit)
         configure_https()
     _certs_changed()
 

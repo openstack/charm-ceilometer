@@ -477,5 +477,5 @@ class CeilometerHooksTest(CharmTestCase):
     def test_certs_changed(self, _process_certificates, _configure_https):
         hooks.hooks.execute(['hooks/certificates-relation-changed'])
         _process_certificates.assert_called_once_with(
-            'ceilometer-api', None, None)
+            'ceilometer', None, None)
         _configure_https.assert_called_once_with()
