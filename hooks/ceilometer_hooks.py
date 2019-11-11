@@ -215,6 +215,9 @@ def configure_https():
     # TODO: improve this by checking if local CN certs are available
     # first then checking reload status (see LP #1433114).
     if not is_unit_paused_set():
+        if (cmp_codename <= 'newton' and
+                CEILOMETER_API_SYSTEMD_CONF in restart_map()):
+            reload_systemd()
         try:
             subprocess.check_call(['service', 'apache2', 'reload'])
         except subprocess.CalledProcessError:
