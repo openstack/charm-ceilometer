@@ -86,6 +86,11 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             other_services.append({
                 'name': 'mongodb',
                 'location': 'cs:~thedac/{}/mongodb'.format(self.series)})
+        if self._get_openstack_release() >= self.bionic_train:
+            other_train_services = [
+                {'name': 'placement'},
+            ]
+            other_services += other_train_services
         super(CeilometerBasicDeployment, self)._add_services(
             this_service,
             other_services,
@@ -137,6 +142,13 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
                 'ceilometer:shared-db': 'mongodb:database',
                 'ceilometer:identity-service': 'keystone:identity-service'}
         relations.update(additional_relations)
+        if self._get_openstack_release() >= self.bionic_train:
+            train_relations = {
+                'placement:shared-db': 'percona-cluster:shared-db',
+                'placement:identity-service': 'keystone:identity-service',
+                'placement:placement': 'nova-cloud-controller:placement',
+            }
+            relations.update(train_relations)
         super(CeilometerBasicDeployment, self)._add_relations(relations)
 
     def _configure_services(self):
@@ -149,10 +161,13 @@ class CeilometerBasicDeployment(OpenStackAmuletDeployment):
             'root-password': 'ChangeMe123',
             'sst-password': 'ChangeMe123',
         }
+        placement_config = {}
         configs = {
             'keystone': keystone_config,
             'percona-cluster': pxc_config,
         }
+        if self._get_openstack_release() >= self.bionic_train:
+            configs['placement'] = placement_config
         super(CeilometerBasicDeployment, self)._configure_services(configs)
 
     def _get_token(self):
