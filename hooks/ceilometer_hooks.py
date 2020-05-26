@@ -440,7 +440,7 @@ def ceilometer_joined():
     # pass the data to agents.
     if 'rabbit_ssl_ca' in context:
         with open(context['rabbit_ssl_ca'], 'rb') as fh:
-            context['rabbit_ssl_ca'] = base64.b64encode(fh.read())
+            context['rabbit_ssl_ca'] = base64.b64encode(fh.read()).decode()
     for relid in relation_ids('ceilometer-service'):
         relation_set(relid, context)
 
