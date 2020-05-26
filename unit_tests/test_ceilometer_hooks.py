@@ -16,7 +16,7 @@ import copy
 import os
 import sys
 
-from mock import patch, MagicMock, call
+from mock import patch, MagicMock, call, mock_open
 
 # python-apt is not installed as part of test-requirements but is imported by
 # some charmhelpers modules so create a fake import.
@@ -317,10 +317,17 @@ class CeilometerHooksTest(CharmTestCase):
     @patch('charmhelpers.core.hookenv.config')
     def test_ceilometer_joined(self, mock_config):
         self.relation_ids.return_value = ['ceilometer:0']
-        self.get_ceilometer_context.return_value = {'test': 'data'}
-        hooks.hooks.execute(['hooks/ceilometer-service-relation-joined'])
-        self.relation_set.assert_called_with('ceilometer:0',
-                                             {'test': 'data'})
+        self.get_ceilometer_context.return_value = {
+            'test': 'data',
+            'rabbit_ssl_ca': '/etc/certs/rabbit.pem'}
+        with patch.object(
+                hooks,
+                'open',
+                mock_open(read_data=b'dGVzdCBjZXJ0Cg==')):
+            hooks.hooks.execute(['hooks/ceilometer-service-relation-joined'])
+        self.relation_set.assert_called_with(
+            'ceilometer:0',
+            {'test': 'data', 'rabbit_ssl_ca': 'ZEdWemRDQmpaWEowQ2c9PQ=='})
 
     @patch('charmhelpers.core.hookenv.config')
     def test_identity_notifications_changed(self, mock_config):
