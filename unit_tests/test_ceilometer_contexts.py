@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import collections
-from mock import patch, MagicMock
+from unittest.mock import patch, MagicMock
 
 import ceilometer_contexts as contexts
 import ceilometer_utils as utils

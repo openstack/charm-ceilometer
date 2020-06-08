@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mock import patch, call, MagicMock
+from unittest.mock import patch, call, MagicMock
 
 import ceilometer_utils as utils
 
