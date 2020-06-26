@@ -133,6 +133,7 @@ class CeilometerContextsTest(CharmTestCase):
             'event_time_to_live': -1,
             'polling_interval': 300,
             'enable_all_pollsters': False,
+            'polling_batch_size': 50,
         })
 
     @patch.object(utils, 'get_shared_secret')
@@ -148,6 +149,7 @@ class CeilometerContextsTest(CharmTestCase):
             'event_time_to_live': 7776000,
             'polling_interval': 300,
             'enable_all_pollsters': False,
+            'polling_batch_size': 50,
         })
         self.assertTrue(type(context['metering_time_to_live']) is int)
         self.assertTrue(type(context['event_time_to_live']) is int)
@@ -164,6 +166,7 @@ class CeilometerContextsTest(CharmTestCase):
             'event_time_to_live': -1,
             'polling_interval': 300,
             'enable_all_pollsters': True,
+            'polling_batch_size': 50,
         })
 
     @patch.object(utils, 'get_shared_secret')
@@ -178,6 +181,7 @@ class CeilometerContextsTest(CharmTestCase):
             'event_time_to_live': -1,
             'polling_interval': 900,
             'enable_all_pollsters': False,
+            'polling_batch_size': 50,
         })
 
     def test_ceilometer_service_context(self):
