@@ -137,7 +137,8 @@ class CeilometerUtilsTest(CharmTestCase):
              "/etc/apache2/sites-available/openstack_https_frontend": [
                  'ceilometer-api', 'apache2'],
              "/etc/apache2/sites-available/openstack_https_frontend.conf": [
-                 'ceilometer-api', 'apache2']
+                 'ceilometer-api', 'apache2'],
+             "/etc/ceilometer/event_pipeline.yaml": ['ceilometer-collector'],
              }
         )
 
@@ -163,7 +164,8 @@ class CeilometerUtilsTest(CharmTestCase):
              "/etc/apache2/sites-available/openstack_https_frontend": [
                  'ceilometer-api', 'apache2'],
              "/etc/apache2/sites-available/openstack_https_frontend.conf": [
-                 'ceilometer-api', 'apache2']
+                 'ceilometer-api', 'apache2'],
+             "/etc/ceilometer/event_pipeline.yaml": ['ceilometer-collector'],
              }
         )
 
@@ -179,6 +181,9 @@ class CeilometerUtilsTest(CharmTestCase):
                 'ceilometer-agent-central',
                 'ceilometer-agent-notification'],
              '/etc/ceilometer/polling.yaml': [
+                'ceilometer-agent-central',
+                'ceilometer-agent-notification'],
+             '/etc/ceilometer/event_pipeline.yaml': [
                 'ceilometer-agent-central',
                 'ceilometer-agent-notification'],
              }

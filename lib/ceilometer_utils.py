@@ -168,6 +168,10 @@ QUEENS_CONFIG_FILES = OrderedDict([
             CeilometerContext()],
         'services': QUEENS_SERVICES
     }),
+    (PIPELINE_CONF, {
+        'hook_contexts': [RemoteSinksContext()],
+        'services': QUEENS_SERVICES,
+    }),
 ])
 
 CONFIG_FILES = OrderedDict([
@@ -210,6 +214,10 @@ CONFIG_FILES = OrderedDict([
         'hook_contexts': [ApacheSSLContext()],
         'services': ['ceilometer-api', 'apache2'],
     }),
+    (PIPELINE_CONF, {
+        'hook_contexts': [RemoteSinksContext()],
+        'services': ['ceilometer-collector'],
+    }),
 ])
 
 TEMPLATES = 'templates'
@@ -240,7 +248,6 @@ def register_configs():
     if CompareOpenStackReleases(release) >= 'queens':
         for conf in QUEENS_CONFIG_FILES:
             configs.register(conf, QUEENS_CONFIG_FILES[conf]['hook_contexts'])
-        configs.register(PIPELINE_CONF, [RemoteSinksContext()])
     else:
         for conf in (CEILOMETER_CONF, HAPROXY_CONF):
             configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
@@ -274,7 +281,9 @@ def register_configs():
                  HAProxyContext()]
             )
         if CompareOpenStackReleases(release) >= 'mitaka':
-            configs.register(PIPELINE_CONF, [RemoteSinksContext()])
+            conf = PIPELINE_CONF
+            configs.register(conf, CONFIG_FILES[conf]['hook_contexts'])
+
     return configs
 
 
