@@ -443,21 +443,29 @@ class CeilometerUtilsTest(CharmTestCase):
         self.get_os_codename_install_source.return_value = 'ocata'
         self.CONFIGS = MagicMock()
         self.CONFIGS.complete_contexts.return_value = [
+            'identity-service',
+            'mongodb'
+        ]
+        self.assertRaises(utils.FailedAction,
+                          utils.ceilometer_upgrade_helper, self.CONFIGS)
+        mock_ceilometer_upgrade.reset_mock()
+
+        self.CONFIGS.complete_contexts.return_value = ['mongodb']
+        self.assertRaises(utils.FailedAction,
+                          utils.ceilometer_upgrade_helper, self.CONFIGS)
+        mock_ceilometer_upgrade.reset_mock()
+
+        import subprocess
+        self.CONFIGS.complete_contexts.return_value = [
             'metric-service',
             'identity-service',
             'mongodb'
         ]
-        # workaround Py3 constraint that raise only accepts an actual
-        # exception, so we have to patch CalledProcessError back onto the
-        # mocked out subprocess module
-        import subprocess
-        exc = subprocess.CalledProcessError
-        mock_ceilometer_upgrade.side_effect = utils.FailedAction("message")
-        with patch.object(utils, 'subprocess') as subp, \
-                self.assertRaises(utils.FailedAction):
-            subp.CalledProcessError = exc
-            utils.ceilometer_upgrade_helper(self.CONFIGS)
-        mock_ceilometer_upgrade.assert_called_once_with(action=True)
+
+        mock_ceilometer_upgrade.side_effect = subprocess.CalledProcessError(
+            1, 'bash_cmd')
+        self.assertRaises(utils.FailedAction,
+                          utils.ceilometer_upgrade_helper, self.CONFIGS)
 
     def test_check_ceilometer_upgraded(self):
         self.CONFIGS = MagicMock()
