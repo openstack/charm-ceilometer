@@ -663,8 +663,9 @@ def ceilometer_upgrade_helper(CONFIGS):
     try:
         ceilometer_upgrade(action=True)
     except subprocess.CalledProcessError as e:
+        msg = '{}'.format(e)
         raise FailedAction('ceilometer-upgrade resulted in an '
-                           'unexpected error: {}'.format(e.message),
+                           'unexpected error: {}'.format(msg),
                            outcome='ceilometer-upgrade failed, see traceback.',
                            trace=traceback.format_exc())
 
