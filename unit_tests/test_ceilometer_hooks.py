@@ -331,6 +331,7 @@ class CeilometerHooksTest(CharmTestCase):
 
     @patch('charmhelpers.core.hookenv.config')
     def test_identity_notifications_changed(self, mock_config):
+        self.services.return_value = ['svc1', 'svc2']
         self.relation_ids.return_value = ['keystone-notifications:0']
 
         self.relation_get.return_value = None
@@ -340,8 +341,8 @@ class CeilometerHooksTest(CharmTestCase):
                                           (hooks.CEILOMETER_SERVICE)): 1}
 
         hooks.hooks.execute(['hooks/identity-notifications-relation-changed'])
-        call1 = call('ceilometer-alarm-evaluator')
-        call2 = call('ceilometer-alarm-notifier')
+        call1 = call('svc1')
+        call2 = call('svc2')
         self.service_restart.assert_has_calls([call1, call2], any_order=False)
 
     @patch('charmhelpers.core.hookenv.config')

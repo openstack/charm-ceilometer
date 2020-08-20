@@ -91,6 +91,7 @@ from ceilometer_utils import (
     services,
     get_ceilometer_context,
     get_shared_secret,
+    GNOCCHI_SERVICE,
     do_openstack_upgrade,
     set_shared_secret,
     assess_status,
@@ -426,10 +427,16 @@ def identity_notifications_changed():
     # Some ceilometer services will create a client and request
     # the service catalog from keystone on startup. So if
     # endpoints change we need to restart these services.
-    key = '%s-endpoint-changed' % (CEILOMETER_SERVICE)
-    if key in notifications:
-        service_restart('ceilometer-alarm-evaluator')
-        service_restart('ceilometer-alarm-notifier')
+    restart_needed = False
+    for svc in [CEILOMETER_SERVICE, GNOCCHI_SERVICE]:
+        key = '%s-endpoint-changed' % (svc)
+        if key in notifications:
+            log('Change of endpoint {} detected, '
+                'trigger service restart'.format(svc))
+            restart_needed = True
+    if restart_needed:
+        for restart_svc in services():
+            service_restart(restart_svc)
 
 
 @hooks.hook("ceilometer-service-relation-joined")

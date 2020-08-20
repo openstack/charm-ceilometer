@@ -107,6 +107,7 @@ MITAKA_SERVICES = [
 
 CEILOMETER_DB = "ceilometer"
 CEILOMETER_SERVICE = "ceilometer"
+GNOCCHI_SERVICE = "gnocchi"
 
 CEILOMETER_BASE_PACKAGES = [
     'haproxy',
