@@ -112,6 +112,7 @@ class CeilometerContext(OSContextGenerator):
             'event_time_to_live': int(config('event-time-to-live')),
             'polling_interval': int(config('polling-interval')),
             'enable_all_pollsters': config('enable-all-pollsters'),
+            'polling_batch_size': config('polling-batch-size'),
         }
         return ctxt
 
