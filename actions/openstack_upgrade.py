@@ -26,6 +26,7 @@ def _add_path(path):
     if path not in sys.path:
         sys.path.insert(1, path)
 
+
 _add_path(_hooks)
 _add_path(_root)
 
@@ -59,6 +60,7 @@ def openstack_upgrade():
                                     do_openstack_upgrade,
                                     CONFIGS)):
         config_changed()
+
 
 if __name__ == '__main__':
     openstack_upgrade()
