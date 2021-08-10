@@ -259,12 +259,24 @@ options:
       .
       'udp://<host>:<port>/'
       'prometheus://pushgateway-host:9091/metrics/job/openstack-telemetry'
+  meter-sink:
+    type: string
+    default:
+    description: |
+      Space delimited list of meter consumers of Ceilometer meter reporting
+      which reside outside of the deployed model. Only supported for Mitaka
+      and later clouds. e.g.
+      .
+      'udp://<host>:<port>/'
+      'http://telegraf-host-host:8080/telegraf?timeout=10&max_retries=2&batch=False'
   pipeline-yaml:
     type: string
     default: ""
     description: |
       When set the content is written to /etc/ceilometer/pipeline.yaml, by
       default the package's file is used.
+
+      This setting is not supported from Mitaka onwards.
   polling-interval:
     type: int
     default: 300

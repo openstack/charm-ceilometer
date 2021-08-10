@@ -13,12 +13,27 @@ sources:
      - {{ item }}
 {% endfor -%}
 {% endif %}
+{%- if meter_sinks %}
+  - name: meter_source
+    meters:
+     - "*"
+    sinks:
+     - meter_sink
+{% endif %}
 sinks:
 {%- if remote_sinks %}
   - name: remote_sink
     transformers:
     publishers:
      {% for item in remote_sinks -%}
+     - {{ item }}
+     {% endfor %}
+{%- endif -%}
+{%- if meter_sinks %}
+  - name: meter_sink
+    transformers:
+    publishers:
+     {% for item in meter_sinks -%}
      - {{ item }}
      {% endfor %}
 {%- endif -%}
