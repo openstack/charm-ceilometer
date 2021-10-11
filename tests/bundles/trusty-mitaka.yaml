@@ -17,43 +17,48 @@ applications:
     to:
       - '0'
   rabbitmq-server:
-    charm: cs:~openstack-charmers-next/rabbitmq-server
+    charm: cs:~openstack-charmers/rabbitmq-server
     num_units: 1
     to:
       - '1'
+    channel: candidate
   mongodb:
     charm:  cs:trusty/mongodb-53
     num_units: 1
     to:
       - '2'
   keystone:
-    charm: cs:~openstack-charmers-next/keystone
+    charm: cs:~openstack-charmers/keystone
     num_units: 1
     options:
       openstack-origin: *source
     to:
       - '3'
+    channel: candidate
   glance:
-    charm: cs:~openstack-charmers-next/glance
+    charm: cs:~openstack-charmers/glance
     num_units: 1
     options:
       openstack-origin: *source
     to:
       - '4'
+    channel: candidate
   nova-cloud-controller:
-    charm: cs:~openstack-charmers-next/nova-cloud-controller
+    charm: cs:~openstack-charmers/nova-cloud-controller
     num_units: 1
     options:
       openstack-origin: *source
     to:
       - '5'
+    channel: candidate
   nova-compute:
-    charm: cs:~openstack-charmers-next/nova-compute
+    charm: cs:~openstack-charmers/nova-compute
     num_units: 1
     options:
       openstack-origin: *source
     to:
       - '6'
+    channel: candidate
   ceilometer:
     num_units: 1
     options:
@@ -61,7 +66,8 @@ applications:
     to:
       - '7'
   ceilometer-agent:
-    charm: cs:~openstack-charmers-next/ceilometer-agent
+    charm: cs:~openstack-charmers/ceilometer-agent
+    channel: candidate
 relations:
 - - 'ceilometer:amqp'
   - 'rabbitmq-server:amqp'
