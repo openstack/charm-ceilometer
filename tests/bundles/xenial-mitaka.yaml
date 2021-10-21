@@ -14,13 +14,11 @@ applications:
     num_units: 1
     to:
       - '0'
-    channel: candidate
   rabbitmq-server:
     charm: cs:~openstack-charmers/rabbitmq-server
     num_units: 1
     to:
       - '1'
-    channel: candidate
   mongodb:
     charm: cs:xenial/mongodb
     num_units: 1
@@ -31,32 +29,27 @@ applications:
     num_units: 1
     to:
       - '3'
-    channel: candidate
   glance:
     charm: cs:~openstack-charmers/glance
     num_units: 1
     to:
       - '4'
-    channel: candidate
   nova-cloud-controller:
     charm: cs:~openstack-charmers/nova-cloud-controller
     num_units: 1
     to:
       - '5'
-    channel: candidate
   nova-compute:
     charm: cs:~openstack-charmers/nova-compute
     num_units: 1
     to:
       - '6'
-    channel: candidate
   ceilometer:
     num_units: 1
     to:
       - '7'
   ceilometer-agent:
     charm: cs:~openstack-charmers/ceilometer-agent
-    channel: candidate
 relations:
 - - 'ceilometer:amqp'
   - 'rabbitmq-server:amqp'
