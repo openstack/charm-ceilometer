@@ -32,7 +32,7 @@ from ceilometer_contexts import (
     HAProxyContext,
     MetricServiceContext,
     CEILOMETER_PORT,
-    CustomSinksContext,
+    RemoteSinksContext,
     AMQPListenersContext,
 )
 from charmhelpers.contrib.openstack.utils import (
@@ -170,7 +170,7 @@ QUEENS_CONFIG_FILES = OrderedDict([
         'services': QUEENS_SERVICES
     }),
     (PIPELINE_CONF, {
-        'hook_contexts': [CustomSinksContext()],
+        'hook_contexts': [RemoteSinksContext()],
         'services': QUEENS_SERVICES,
     }),
     (CEILOMETER_PIPELINE_YAML, {
@@ -220,7 +220,7 @@ CONFIG_FILES = OrderedDict([
         'services': ['ceilometer-api', 'apache2'],
     }),
     (PIPELINE_CONF, {
-        'hook_contexts': [CustomSinksContext()],
+        'hook_contexts': [RemoteSinksContext()],
         'services': ['ceilometer-collector'],
     }),
 ])

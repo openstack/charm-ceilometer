@@ -156,7 +156,7 @@ class HAProxyContext(OSContextGenerator):
         return ctxt
 
 
-class CustomSinksContext(OSContextGenerator):
+class RemoteSinksContext(OSContextGenerator):
     interfaces = ['event-service']
 
     def __call__(self):
@@ -166,8 +166,6 @@ class CustomSinksContext(OSContextGenerator):
         ctxt = {}
         if config('remote-sink'):
             ctxt['remote_sinks'] = config('remote-sink').split(' ')
-        if config('meter-sink'):
-            ctxt['meter_sinks'] = config('meter-sink').split(' ')
         for relid in relation_ids('event-service'):
             for unit in related_units(relid):
                 publisher = relation_get('publisher', unit=unit, rid=relid)
