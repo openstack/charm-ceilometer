@@ -71,6 +71,7 @@ applications:
   memcached:
     charm: ch:memcached
     num_units: 1
+    # the memcached charm doesn't support focal yet.
     to:
       - '4'
 
