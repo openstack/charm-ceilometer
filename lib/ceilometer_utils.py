@@ -173,6 +173,10 @@ QUEENS_CONFIG_FILES = OrderedDict([
         'hook_contexts': [CustomSinksContext()],
         'services': QUEENS_SERVICES,
     }),
+    (CEILOMETER_PIPELINE_YAML, {
+        'hook_contexts': [CeilometerPipelineContext()],
+        'services': QUEENS_SERVICES,
+    }),
 ])
 
 CONFIG_FILES = OrderedDict([

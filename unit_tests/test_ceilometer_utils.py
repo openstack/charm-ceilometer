@@ -186,6 +186,9 @@ class CeilometerUtilsTest(CharmTestCase):
              '/etc/ceilometer/event_pipeline.yaml': [
                 'ceilometer-agent-central',
                 'ceilometer-agent-notification'],
+             '/etc/ceilometer/pipeline.yaml': [
+                'ceilometer-agent-central',
+                'ceilometer-agent-notification'],
              }
         )
 
