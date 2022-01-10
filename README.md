@@ -23,7 +23,7 @@ for resource, metrics and measure storage:
 Note: When ceilometer is related to gnocchi the ceilometer-upgrade action
 must be run post deployment in order to update its data store in gnocchi.
 
-    juju run-action ceilometer-upgrade
+    juju run-action ceilometer/0 ceilometer-upgrade
 
 then Keystone and Rabbit relationships need to be established:
 
