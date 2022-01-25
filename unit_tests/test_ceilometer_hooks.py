@@ -110,33 +110,6 @@ class CeilometerHooksTest(CharmTestCase):
         self.configure_installation_source.\
             assert_called_with('cloud:precise-havana')
 
-    @patch('charmhelpers.payload.execd.default_execd_dir',
-           return_value=os.path.join(os.getcwd(), 'exec.d'))
-    @patch('charmhelpers.core.hookenv.config')
-    def test_install_hook_precise(self, mock_config, mock_execd_dir):
-        hooks.hooks.execute(['hooks/install.real'])
-        self.configure_installation_source.\
-            assert_called_with('cloud:precise-grizzly')
-        self.apt_update.assert_called_with(fatal=True)
-        self.apt_install.assert_called_with(
-            ceilometer_utils.CEILOMETER_BASE_PACKAGES,
-            fatal=True
-        )
-
-    @patch('charmhelpers.payload.execd.default_execd_dir',
-           return_value=os.path.join(os.getcwd(), 'exec.d'))
-    @patch('charmhelpers.core.hookenv.config')
-    def test_install_hook_distro(self, mock_config, mock_execd_dir):
-        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'saucy'}
-        hooks.hooks.execute(['hooks/install.real'])
-        self.configure_installation_source.\
-            assert_called_with('distro')
-        self.apt_update.assert_called_with(fatal=True)
-        self.apt_install.assert_called_with(
-            ceilometer_utils.CEILOMETER_BASE_PACKAGES,
-            fatal=True
-        )
-
     @patch('charmhelpers.core.hookenv.config')
     def test_amqp_joined(self, mock_config):
         hooks.hooks.execute(['hooks/amqp-relation-joined'])

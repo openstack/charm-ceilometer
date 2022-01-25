@@ -13,10 +13,7 @@ tags:
 - telemetry
 - misc
 series:
-- bionic
 - focal
-- groovy
-- hirsute
 - impish
 extra-bindings:
   public:

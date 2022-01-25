@@ -33,18 +33,23 @@ machines:
 applications:
 
   keystone-mysql-router:
-    charm: cs:~openstack-charmers-next/mysql-router
+    charm: ch:mysql-router
+    channel: latest/edge
   glance-mysql-router:
-    charm: cs:~openstack-charmers-next/mysql-router
+    charm: ch:mysql-router
+    channel: latest/edge
   nova-cloud-controller-mysql-router:
-    charm: cs:~openstack-charmers-next/mysql-router
+    charm: ch:mysql-router
+    channel: latest/edge
   placement-mysql-router:
-    charm: cs:~openstack-charmers-next/mysql-router
+    charm: ch:mysql-router
+    channel: latest/edge
   gnocchi-mysql-router:
-    charm: cs:~openstack-charmers-next/mysql-router
+    charm: ch:mysql-router
+    channel: latest/edge
 
   mysql-innodb-cluster:
-    charm: cs:~openstack-charmers-next/mysql-innodb-cluster
+    charm: ch:mysql-innodb-cluster
     num_units: 3
     options:
       source: *openstack-origin
@@ -52,17 +57,19 @@ applications:
       - '0'
       - '1'
       - '2'
+    channel: latest/edge
 
   rabbitmq-server:
-    charm: cs:~openstack-charmers-next/rabbitmq-server
+    charm: ch:rabbitmq-server
     num_units: 1
     options:
       source: *openstack-origin
     to:
       - '3'
+    channel: latest/edge
 
   memcached:
-    charm: cs:~memcached-team/memcached
+    charm: ch:memcached
     num_units: 1
     # the memcached charm doesn't support focal yet.
     series: bionic
@@ -70,7 +77,7 @@ applications:
       - '4'
 
   ceph-osd:
-    charm: cs:~openstack-charmers-next/ceph-osd
+    charm: ch:ceph-osd
     num_units: 3
     storage:
       osd-devices: 'cinder,10G'
@@ -80,9 +87,10 @@ applications:
       - '5'
       - '6'
       - '7'
+    channel: latest/edge
 
   ceph-mon:
-    charm: cs:~openstack-charmers-next/ceph-mon
+    charm: ch:ceph-mon
     num_units: 3
     options:
       source: *openstack-origin
@@ -90,59 +98,69 @@ applications:
       - '8'
       - '9'
       - '10'
+    channel: latest/edge
 
   keystone:
-    charm: cs:~openstack-charmers-next/keystone
+    charm: ch:keystone
     num_units: 1
     options:
       openstack-origin: *openstack-origin
     to:
       - '11'
+    channel: latest/edge
 
   glance:
-    charm: cs:~openstack-charmers-next/glance
+    charm: ch:glance
     num_units: 1
     options:
       openstack-origin: *openstack-origin
     to:
       - '12'
+    channel: latest/edge
 
   nova-cloud-controller:
-    charm: cs:~openstack-charmers-next/nova-cloud-controller
+    charm: ch:nova-cloud-controller
     num_units: 1
     options:
       openstack-origin: *openstack-origin
     to:
       - '13'
+    channel: latest/edge
 
   placement:
-    charm: cs:~openstack-charmers-next/placement
+    charm: ch:placement
     num_units: 1
     options:
       openstack-origin: *openstack-origin
     to:
       - '14'
+    channel: latest/edge
 
   nova-compute:
-    charm: cs:~openstack-charmers-next/nova-compute
+    charm: ch:nova-compute
     num_units: 1
     options:
       openstack-origin: *openstack-origin
     to:
       - '15'
+    channel: latest/edge
 
   ceilometer:
+    charm: ../../
     num_units: 1
+    options:
+      openstack-origin: *openstack-origin
     to:
       - '16'
 
   gnocchi:
-    charm: cs:~openstack-charmers-next/gnocchi
+    charm: ch:gnocchi
     num_units: 1
     options:
       openstack-origin: *openstack-origin
     to:
       - '17'
+    channel: latest/edge
 
   ceilometer-agent:
     charm: cs:~openstack-charmers-next/ceilometer-agent
