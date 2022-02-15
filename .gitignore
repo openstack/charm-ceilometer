@@ -3,6 +3,7 @@ bin
 .testrepository
 .stestr
 .tox
+*.charm
 tags
 *.sw[nop]
 *.pyc

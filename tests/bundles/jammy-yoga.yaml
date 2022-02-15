@@ -87,7 +87,7 @@ applications:
       - '5'
       - '6'
       - '7'
-    channel: latest/edge
+    channel: quincy/edge
 
   ceph-mon:
     charm: ch:ceph-mon
@@ -98,7 +98,7 @@ applications:
       - '8'
       - '9'
       - '10'
-    channel: latest/edge
+    channel: quincy/edge
 
   keystone:
     charm: ch:keystone
@@ -107,7 +107,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '11'
-    channel: latest/edge
+    channel: yoga/edge
 
   glance:
     charm: ch:glance
@@ -116,7 +116,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '12'
-    channel: latest/edge
+    channel: yoga/edge
 
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
@@ -125,7 +125,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '13'
-    channel: latest/edge
+    channel: yoga/edge
 
   placement:
     charm: ch:placement
@@ -134,7 +134,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '14'
-    channel: latest/edge
+    channel: yoga/edge
 
   nova-compute:
     charm: ch:nova-compute
@@ -143,10 +143,10 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '15'
-    channel: latest/edge
+    channel: yoga/edge
 
   ceilometer:
-    charm: ../../
+    charm: ../../ceilometer.charm
     num_units: 1
     options:
       openstack-origin: *openstack-origin
@@ -160,10 +160,10 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '17'
-    channel: latest/edge
+    channel: yoga/edge
 
   ceilometer-agent:
-    charm: cs:~openstack-charmers-next/ceilometer-agent
+    charm: ch:ceilometer-agent
 
 relations:
 
