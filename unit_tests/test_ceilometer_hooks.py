@@ -113,24 +113,11 @@ class CeilometerHooksTest(CharmTestCase):
     @patch('charmhelpers.payload.execd.default_execd_dir',
            return_value=os.path.join(os.getcwd(), 'exec.d'))
     @patch('charmhelpers.core.hookenv.config')
-    def test_install_hook_precise(self, mock_config, mock_execd_dir):
-        hooks.hooks.execute(['hooks/install.real'])
-        self.configure_installation_source.\
-            assert_called_with('cloud:precise-grizzly')
-        self.apt_update.assert_called_with(fatal=True)
-        self.apt_install.assert_called_with(
-            ceilometer_utils.CEILOMETER_BASE_PACKAGES,
-            fatal=True
-        )
-
-    @patch('charmhelpers.payload.execd.default_execd_dir',
-           return_value=os.path.join(os.getcwd(), 'exec.d'))
-    @patch('charmhelpers.core.hookenv.config')
-    def test_install_hook_distro(self, mock_config, mock_execd_dir):
+    def test_install_hook_default(self, mock_config, mock_execd_dir):
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'saucy'}
         hooks.hooks.execute(['hooks/install.real'])
         self.configure_installation_source.\
-            assert_called_with('distro')
+            assert_called_with('cloud:focal-xena')
         self.apt_update.assert_called_with(fatal=True)
         self.apt_install.assert_called_with(
             ceilometer_utils.CEILOMETER_BASE_PACKAGES,
