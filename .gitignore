@@ -1,5 +1,6 @@
 bin
 .coverage
+.coveragerc
 .testrepository
 .stestr
 .tox
@@ -8,3 +9,4 @@ tags
 *.pyc
 .unit-state.db
 func-results.json
+*.charm
