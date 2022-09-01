@@ -21,7 +21,10 @@ for resource, metrics and measure storage:
     juju add-relation ceilometer gnocchi
 
 Note: When ceilometer is related to gnocchi the ceilometer-upgrade action
-must be run post deployment in order to update its data store in gnocchi.
+must be run post deployment in order to update its data store in gnocchi. It
+is not strictly necessary to re-run this action on every charm or OpenStack
+release upgrade. If re-running it, be aware that it may override any
+gnocchi resource-type adjustments that would have been made.
 
     juju run-action ceilometer/0 ceilometer-upgrade
 
