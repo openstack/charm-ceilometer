@@ -4,15 +4,15 @@ configure:
   - zaza.openstack.charm_tests.ceilometer.setup.basic_setup
 
 gate_bundles:
-  - jammy-yoga
+  - jammy-zed
 
 dev_bundles:
-  - jammy-yoga
-  - jammy-zed
+  - jammy-antelope
   - kinetic-zed
+  - lunar-antelope
 
 smoke_bundles:
-  - jammy-yoga
+  - jammy-zed
 
 tests:
   - zaza.openstack.charm_tests.ceilometer.tests.CeilometerTest
@@ -25,3 +25,4 @@ target_deploy_status:
 tests_options:
   force_deploy:
     - kinetic-zed
+    - lunar-antelope

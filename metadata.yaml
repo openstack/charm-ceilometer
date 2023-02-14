@@ -15,6 +15,7 @@ tags:
 series:
 - jammy
 - kinetic
+- lunar
 extra-bindings:
   public:
   admin:
