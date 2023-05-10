@@ -33,37 +33,37 @@ applications:
 
   keystone-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   glance-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   nova-cloud-controller-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   placement-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   gnocchi-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
 
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
     num_units: 3
     options:
-      source: *openstack-origin
+      source: distro
     to:
       - '0'
       - '1'
       - '2'
-    channel: latest/edge
+    channel: 8.0/edge
 
   rabbitmq-server:
     charm: ch:rabbitmq-server
     num_units: 1
     to:
       - '3'
-    channel: latest/edge
+    channel: 3.9/edge
 
   memcached:
     charm: ch:memcached
@@ -84,7 +84,7 @@ applications:
       - '5'
       - '6'
       - '7'
-    channel: latest/edge
+    channel: quincy/edge
 
   ceph-mon:
     charm: ch:ceph-mon
@@ -95,7 +95,7 @@ applications:
       - '8'
       - '9'
       - '10'
-    channel: latest/edge
+    channel: quincy/edge
 
   keystone:
     charm: ch:keystone
@@ -104,7 +104,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '11'
-    channel: latest/edge
+    channel: 2023.1/edge
 
   glance:
     charm: ch:glance
@@ -113,7 +113,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '12'
-    channel: latest/edge
+    channel: 2023.1/edge
 
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
@@ -122,7 +122,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '13'
-    channel: latest/edge
+    channel: 2023.1/edge
 
   placement:
     charm: ch:placement
@@ -131,7 +131,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '14'
-    channel: latest/edge
+    channel: 2023.1/edge
 
   nova-compute:
     charm: ch:nova-compute
@@ -140,7 +140,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '15'
-    channel: latest/edge
+    channel: 2023.1/edge
 
   ceilometer:
     charm: ../../ceilometer.charm
@@ -157,11 +157,11 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '17'
-    channel: latest/edge
+    channel: 2023.1/edge
 
   ceilometer-agent:
     charm: ch:ceilometer-agent
-    channel: latest/edge
+    channel: 2023.1/edge
 
 relations:
 
