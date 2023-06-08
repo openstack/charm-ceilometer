@@ -254,11 +254,11 @@ options:
     default:
     description: |
       Space delimited list of remote consumers of Ceilometer event reporting
-      which reside outside of the deployed model. Only supported for Mitaka
-      and later clouds. e.g.
+      which reside outside of the deployed model. Valid remotes are test, 
+      messaging, http and gnocchi. e.g.
       .
-      'udp://<host>:<port>/'
-      'prometheus://pushgateway-host:9091/metrics/job/openstack-telemetry'
+      'http://host:80/path?timeout=1&max_retries=2&batch=False'
+      'gnocchi://host:8041?archive_policy=low&filter_project=gnocchi'
   pipeline-yaml:
     type: string
     default: ""
