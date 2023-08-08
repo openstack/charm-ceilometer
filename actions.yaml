@@ -1,7 +1,7 @@
 pause:
   description: Pause the Ceilometer unit.  This action will stop Ceilometer services.
 resume:
-  descrpition: Resume the Ceilometer unit.  This action will start Ceilometer services.
+  description: Resume the Ceilometer unit.  This action will start Ceilometer services.
 ceilometer-upgrade:
   description: |
     Perform ceilometer-upgrade. This action will update Ceilometer data store configuration.
