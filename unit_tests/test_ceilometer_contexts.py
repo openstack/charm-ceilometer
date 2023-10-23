@@ -128,6 +128,7 @@ class CeilometerContextsTest(CharmTestCase):
         secret.return_value = 'mysecret'
         self.assertEqual(contexts.CeilometerContext()(), {
             'port': 8777,
+            'region': 'RegionOne',
             'metering_secret': 'mysecret',
             'metering_time_to_live': -1,
             'event_time_to_live': -1,
@@ -144,6 +145,7 @@ class CeilometerContextsTest(CharmTestCase):
         context = contexts.CeilometerContext()()
         self.assertEqual(context, {
             'port': 8777,
+            'region': 'RegionOne',
             'metering_secret': 'mysecret',
             'metering_time_to_live': 7776000,
             'event_time_to_live': 7776000,
@@ -161,6 +163,7 @@ class CeilometerContextsTest(CharmTestCase):
         context = contexts.CeilometerContext()()
         self.assertEqual(context, {
             'port': 8777,
+            'region': 'RegionOne',
             'metering_secret': 'mysecret',
             'metering_time_to_live': -1,
             'event_time_to_live': -1,
@@ -176,6 +179,7 @@ class CeilometerContextsTest(CharmTestCase):
         context = contexts.CeilometerContext()()
         self.assertEqual(context, {
             'port': 8777,
+            'region': 'RegionOne',
             'metering_secret': 'mysecret',
             'metering_time_to_live': -1,
             'event_time_to_live': -1,

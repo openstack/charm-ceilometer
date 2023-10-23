@@ -113,6 +113,7 @@ class CeilometerContext(OSContextGenerator):
             'polling_interval': int(config('polling-interval')),
             'enable_all_pollsters': config('enable-all-pollsters'),
             'polling_batch_size': config('polling-batch-size'),
+            'region': config('region'),
         }
         return ctxt
 
