@@ -10,13 +10,11 @@ description: |
   of consumers.
 docs: https://discourse.charmhub.io/t/ceilometer-docs-index/11219
 tags:
-- openstack
-- telemetry
-- misc
+  - openstack
+  - telemetry
+  - misc
 series:
-- jammy
-- lunar
-- mantic
+  - jammy
 extra-bindings:
   public:
   admin:
