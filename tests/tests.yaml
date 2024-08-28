@@ -4,13 +4,11 @@ configure:
   - zaza.openstack.charm_tests.ceilometer.setup.basic_setup
 
 gate_bundles:
-  - jammy-antelope
-  - jammy-bobcat
-  - jammy-caracal
+  - noble-caracal
 dev_bundles:
   - noble-caracal
 smoke_bundles:
-  - jammy-caracal
+  - noble-caracal
 tests:
   - zaza.openstack.charm_tests.ceilometer.tests.CeilometerTest
 

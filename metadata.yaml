@@ -13,8 +13,6 @@ tags:
   - openstack
   - telemetry
   - misc
-series:
-  - jammy
 extra-bindings:
   public:
   admin:
