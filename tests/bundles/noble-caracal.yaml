@@ -143,7 +143,7 @@ applications:
     channel: latest/edge
 
   ceilometer:
-    charm: ../../ceilometer.charm
+    charm: ../../ceilometer_ubuntu@24.04-amd64.charm
     num_units: 1
     options:
       openstack-origin: *openstack-origin
