@@ -5,7 +5,6 @@ configure:
 
 gate_bundles:
   - focal-xena
-  - impish-xena
 
 dev_bundles:
   - focal-yoga
@@ -24,5 +23,4 @@ target_deploy_status:
 
 tests_options:
   force_deploy:
-    - impish-xena
     - jammy-yoga
