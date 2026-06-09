@@ -169,6 +169,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.relation_ids.return_value = ['ceilometer/0',
                                           'ceilometer/1',
                                           'ceilometer/2']
+        os.environ['CHARM_DIR'] = 'hooks'
         hooks.hooks.execute(['hooks/upgrade-charm'])
         self.assertEqual(cluster_joined.call_count, 3)
         any_changed.assert_called_once()
@@ -181,6 +182,7 @@ class CeilometerHooksTest(CharmTestCase):
         self.is_leader.return_value = True
         self.leader_get.return_value = False
         self.relation_ids.return_value = ['metric-service:1']
+        os.environ['CHARM_DIR'] = 'hooks'
         hooks.hooks.execute(['hooks/upgrade-charm'])
         self.leader_set.assert_called_once_with(ceilometer_upgrade_run=True)
 
